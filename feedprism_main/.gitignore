@@ -1,0 +1,33 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Environment files (NEVER commit these!)
+.env
+credentials.json
+token.json
+
+# Data directories
+data/raw_emails/
+data/extracted/
+data/logs/
+data/qdrant_storage/
+*.log
+
+# IDEs  
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
