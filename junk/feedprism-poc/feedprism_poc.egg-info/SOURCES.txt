@@ -1,0 +1,6 @@
+pyproject.toml
+feedprism_poc.egg-info/PKG-INFO
+feedprism_poc.egg-info/SOURCES.txt
+feedprism_poc.egg-info/dependency_links.txt
+feedprism_poc.egg-info/requires.txt
+feedprism_poc.egg-info/top_level.txt

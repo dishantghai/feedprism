@@ -1,0 +1,22 @@
+# mom_hack/pyproject.toml
+[project]
+name = "feedprism"
+version = "0.1.0"
+description = "FeedPrism – proof‑of‑concept pipeline (final version)"
+requires-python = ">=3.9"
+license = "MIT"
+
+# Core dependencies (same ones we used in the PoC, but you can bump versions)
+dependencies = [
+    "openai>=1.50.0",               # latest stable API client
+    "qdrant-client==1.7.0",         # vector DB client
+    "google-auth-oauthlib==1.1.0",
+    "google-auth-httplib2==0.1.1",
+    "google-api-python-client==2.108.0",
+    "beautifulsoup4==4.12.2",
+    "python-dotenv==1.2.1",         # loads .env files
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
