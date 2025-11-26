@@ -1,0 +1,48 @@
+# ------------------------------------------------------------
+# Git ignore for the FeedPrism hackathon repository (root)
+# ------------------------------------------------------------
+
+# Python byte‑code / caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments (both the top‑level and any inside sub‑folders)
+.venv/
+venv/
+feedprism_main/.venv/
+
+# Environment / secret files (never commit!)
+.env
+.env.*
+credentials.json
+token.json
+
+# Data directories (large, generated, or transient)
+/data/
+feedprism_main/data/
+
+# Jupyter notebook artefacts
+.ipynb_checkpoints/
+*.ipynb
+
+# OS‑specific artefacts
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# IDE / editor settings
+.vscode/
+.idea/
+
+# Optional: ignore model cache if you ever place it inside the repo
+# models/
+
+# Obsidian vault
+.obsidian/
+
+# End of .gitignore
