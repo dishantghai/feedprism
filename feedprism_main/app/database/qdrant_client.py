@@ -24,7 +24,52 @@ from app.config import settings
 
 
 class QdrantService:
-    """Service for Qdrant vector database operations."""
+    """
+    Service for Qdrant vector database operations.
+    
+    Handles collection management, point upsert, vector search, and payload filtering
+    for multi-content type storage (events, courses, blogs).
+    
+    Recommended Payload Structure:
+        For Phase 2+ multi-content storage, use this standardized structure:
+        
+        {
+            "content_type": "event|course|blog",  # Required for filtering
+            "title": str,                          # Content title
+            "description": str,                    # Content description
+            "source_email_id": str,               # Gmail message ID
+            "source_subject": str,                # Email subject
+            "source_from": str,                   # Email sender
+            "extracted_at": str,                  # ISO 8601 timestamp
+            "tags": List[str],                    # Content tags
+            
+            # Type-specific fields (optional)
+            "start_time": str,                    # Events only
+            "location": str,                      # Events only
+            "provider": str,                      # Courses only
+            "author": str,                        # Blogs only
+            "url": str,                           # Courses/Blogs
+            # ... other fields as needed
+        }
+    
+    Example Usage:
+        >>> qdrant = QdrantService()
+        >>> qdrant.create_collection()
+        >>> 
+        >>> # Store event with content_type
+        >>> point = PointStruct(
+        ...     id="uuid",
+        ...     vector=[...],
+        ...     payload={"content_type": "event", "title": "AI Conference"}
+        ... )
+        >>> qdrant.upsert_points([point])
+        >>> 
+        >>> # Search only courses
+        >>> results = qdrant.search(
+        ...     query_vector=[...],
+        ...     filter_dict={"content_type": "course"}
+        ... )
+    """
     
     def __init__(
         self,

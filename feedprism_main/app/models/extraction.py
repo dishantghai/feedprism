@@ -23,6 +23,10 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 from loguru import logger
 
+###############################################################################
+# Event Extraction Models
+###############################################################################
+
 
 class EventStatus(str, Enum):
     """Event temporal status."""
@@ -173,3 +177,62 @@ class EventExtractionResult(BaseModel):
     model_config = {
         "extra": "forbid"
     }
+
+###############################################################################
+# Course Extraction Models
+###############################################################################
+
+class CourseLevel(str, Enum):
+    """Course difficulty level."""
+    BEGINNER = "beginner"
+    INTERMEDIATE = "intermediate"
+    ADVANCED = "advanced"
+    ALL_LEVELS = "all_levels"
+
+
+class ExtractedCourse(BaseModel):
+    """Pydantic model for extracted course information."""
+    
+    title: str = Field(..., description="Course title")
+    description: Optional[str] = Field(None, description="Detailed course description")
+    provider: Optional[str] = Field(None, description="Course provider (e.g., Coursera, Udemy)")
+    instructor: Optional[str] = Field(None, description="Instructor name")
+    level: Optional[CourseLevel] = Field(None, description="Course difficulty level")
+    duration: Optional[str] = Field(None, description="Course duration (e.g., '6 weeks', '20 hours')")
+    cost: Optional[str] = Field(None, description="Cost information (e.g., 'Free', '$49', 'Subscription')")
+    enrollment_link: Optional[str] = Field(None, description="Course enrollment URL")
+    tags: List[str] = Field(default_factory=list, description="Relevant tags/topics")
+    start_date: Optional[str] = Field(None, description="Course start date (if fixed schedule)")
+    certificate_offered: Optional[bool] = Field(None, description="Whether a certificate is offered")
+
+
+class CourseExtractionResult(BaseModel):
+    """Result of course extraction from email."""
+    
+    courses: List[ExtractedCourse] = Field(default_factory=list, description="List of extracted courses")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Extraction confidence (0.0 - 1.0)")
+
+
+###############################################################################
+# Blog Extraction Models
+###############################################################################
+
+class ExtractedBlog(BaseModel):
+    """Pydantic model for extracted blog/article information."""
+    
+    title: str = Field(..., description="Blog post title")
+    description: Optional[str] = Field(None, description="Article summary or excerpt")
+    author: Optional[str] = Field(None, description="Author name")
+    published_date: Optional[str] = Field(None, description="Publication date (ISO 8601)")
+    url: Optional[str] = Field(None, description="Article URL")
+    category: Optional[str] = Field(None, description="Content category (e.g., 'AI', 'Web Dev')")
+    reading_time: Optional[str] = Field(None, description="Estimated reading time")
+    tags: List[str] = Field(default_factory=list, description="Article tags/topics")
+    source: Optional[str] = Field(None, description="Publication source (blog name, newsletter)")
+
+
+class BlogExtractionResult(BaseModel):
+    """Result of blog extraction from email."""
+    
+    blogs: List[ExtractedBlog] = Field(default_factory=list, description="List of extracted blogs/articles")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Extraction confidence")
