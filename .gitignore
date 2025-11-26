@@ -27,7 +27,7 @@ feedprism_main/data/
 
 # Jupyter notebook artefacts
 .ipynb_checkpoints/
-*.ipynb
+# *.ipynb
 
 # OS‑specific artefacts
 .DS_Store
