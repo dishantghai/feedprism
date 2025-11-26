@@ -178,6 +178,8 @@
   },
   "active": "50df3a0606c9c674",
   "lastOpenFiles": [
+    "uv.lock",
+    "feedprism_main/requirements.txt",
     "feedprism_main/tests/__init__.py",
     "feedprism_main/app/utils/__init__.py",
     "feedprism_main/app/database/__init__.py",
@@ -187,8 +189,6 @@
     "feedprism_main/docs",
     "feedprism_main/scripts",
     "feedprism_main/tests",
-    "feedprism_main/data/raw_emails",
-    "feedprism_main/data/qdrant_storage",
     "project_ops/02_planning/revised_implementation_guide/Phase_9_Spayce_Integration_Guide.md",
     "project_ops/02_planning/revised_implementation_guide/Phase_8_Hackathon_Submission_Guide.md",
     "project_ops/02_planning/revised_implementation_guide/00_README.md",

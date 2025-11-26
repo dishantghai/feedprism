@@ -314,11 +314,17 @@ echo "✅ Created requirements.txt"
 **Install all dependencies:**
 
 ```bash
-# Upgrade pip first
-pip install --upgrade pip
+# Ensure uv is up‑to‑date
+uv self update
 
-# Install all requirements
-pip install -r requirements.txt
+# Generate a deterministic lock file from requirements.txt
+uv lock
+
+# Install all dependencies exactly as pinned in the lock file
+uv sync
+
+# If you add new packages later, update requirements.txt and run `uv lock` again
+
 
 # This will take 5-10 minutes (downloads ~2GB for PyTorch)
 # You'll see progress bars for each package
