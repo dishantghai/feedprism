@@ -23,10 +23,6 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 from loguru import logger
 
-###############################################################################
-# Event Extraction Models
-###############################################################################
-
 
 class EventStatus(str, Enum):
     """Event temporal status."""
@@ -177,6 +173,7 @@ class EventExtractionResult(BaseModel):
     model_config = {
         "extra": "forbid"
     }
+
 
 ###############################################################################
 # Course Extraction Models
