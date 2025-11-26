@@ -17,6 +17,7 @@ feedprism_main/.venv/
 # Environment / secret files (never commit!)
 .env
 .env.*
+!.env.example
 credentials.json
 token.json
 

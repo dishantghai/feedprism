@@ -17,6 +17,10 @@ dependencies = [
     "python-dotenv==1.2.1",         # loads .env files
 ]
 
+[tool.uv]
+# optional: tell uv to treat this as a package
+package = "feedprism_main"
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"

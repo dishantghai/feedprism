@@ -9,6 +9,7 @@ __pycache__/
 
 # Environment files (NEVER commit these!)
 .env
+!.env.example
 credentials.json
 token.json
 
