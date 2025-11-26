@@ -926,7 +926,7 @@ Theory:
 - Pydantic validates data at runtime (catches bad LLM outputs)
 - Field descriptions become LLM prompts via JSON Schema
 - Optional fields allow partial extraction (LLM can return null)
-- HttpUrl type validates URL format automatically
+- String fields are used for URLs (OpenAI Structured Outputs doesn't support format: uri)
 
 Author: FeedPrism Team
 Date: Nov 2025
@@ -936,7 +936,7 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, field_validator
 from loguru import logger
 
 
@@ -1000,7 +1000,7 @@ class ExtractedEvent(BaseModel):
         description="Event location (physical address or 'Online' for virtual events)"
     )
     
-    registration_link: Optional[HttpUrl] = Field(
+    registration_link: Optional[str] = Field(
         None,
         description="URL to register for the event or get more information"
     )
@@ -1019,6 +1019,10 @@ class ExtractedEvent(BaseModel):
         None,
         description="Cost information (e.g., 'Free', '$50', 'Members only')"
     )
+    
+    model_config = {
+        "extra": "forbid"
+    }
     
     @field_validator('start_time', 'end_time')
     @classmethod
@@ -1081,6 +1085,10 @@ class EventExtractionResult(BaseModel):
         le=1.0,
         description="Confidence score for the extraction (0.0 to 1.0)"
     )
+    
+    model_config = {
+        "extra": "forbid"
+    }
 ENDOFFILE
 
 echo "✅ Created app/models/extraction.py"
@@ -1208,10 +1216,9 @@ class LLMExtractor:
         logger.info(f"Extracting events from: '{email_subject[:50]}...'")
         
         prompt = self._build_prompt(email_text, email_subject)
-        schema = EventExtractionResult.model_json_schema()
         
         try:
-            response = await self.client.chat.completions.create(
+            response = await self.client.beta.chat.completions.parse(
                 model=self.model,
                 messages=[
                     {
@@ -1223,20 +1230,12 @@ class LLMExtractor:
                         "content": prompt
                     }
                 ],
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "event_extraction",
-                        "strict": True,
-                        "schema": schema
-                    }
-                },
+                response_format=EventExtractionResult,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens
             )
             
-            content = response.choices[0].message.content
-            result = EventExtractionResult(**json.loads(content))
+            result = response.choices[0].message.parsed
             
             logger.success(f"Extracted {len(result.events)} events (confidence: {result.confidence:.2f})")
             return result
@@ -1276,7 +1275,7 @@ echo "✅ Created app/services/extractor.py"
 python << 'EOF'
 import asyncio
 import sys
-sys.path.insert(0, '/Users/Shared/ALL WORKSPACE/Hackathons/mom_hack/feedprism_main')
+sys.path.insert(0, '/Users/Shared/ALL WORKSPACE/Hackathons/mom_hack/feedprism_main'
 
 from app.services.extractor import LLMExtractor
 
@@ -2343,6 +2342,75 @@ ValueError: Vector dimension mismatch: expected 384, got 768
    ```python
    qdrant.create_collection(recreate=True)
    ```
+
+#### Issue 8: Jupyter Notebook Async Error
+
+**Symptoms:**
+```
+RuntimeError: asyncio.run() cannot be called from a running event loop
+```
+
+**Cause:**
+Jupyter notebooks already run inside an asyncio event loop. Calling `asyncio.run()` tries to create a new loop, which isn't allowed.
+
+**Solution:**
+In notebook cells, use `await` directly instead of `asyncio.run()`:
+
+```python
+# ❌ Don't use this in notebooks:
+# asyncio.run(test())
+
+# ✅ Use this instead:
+await test()
+```
+
+**Working Example for Notebooks:**
+```python
+from app.services.extractor import LLMExtractor
+
+async def test():
+    extractor = LLMExtractor()
+    result = await extractor.extract_events(email_text, subject)
+    print(f"Extracted {len(result.events)} events")
+
+# Run directly with await
+await test()
+```
+
+#### Issue 9: Credentials Not Found in Jupyter Notebooks
+
+**Symptoms:**
+```
+FileNotFoundError: Gmail credentials not found: credentials.json
+Please download from Google Cloud Console
+```
+
+**Cause:**
+Jupyter notebooks run relative to their own location (e.g., `feedprism_main/notebooks/`), but `credentials.json` is in the parent directory (`feedprism_main/`). The config looks for `Path("credentials.json")` relative to the current working directory.
+
+**Solution:**
+Add this to the **first cell** of your notebook to change the working directory:
+
+```python
+import os
+import sys
+from pathlib import Path
+
+# Get the absolute path to the project root (feedprism_main)
+# Assuming the notebook is in feedprism_main/notebooks/
+project_root = Path.cwd().parent.absolute()
+
+# Change working directory to project root
+os.chdir(project_root)
+
+# Add project root to Python path
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+print(f"✅ Working directory set to: {os.getcwd()}")
+```
+
+After running this cell, all imports will work correctly and config will find `credentials.json`.
 
 ### Debug Logging
 

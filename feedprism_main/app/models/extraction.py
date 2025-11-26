@@ -84,7 +84,7 @@ class ExtractedEvent(BaseModel):
         description="Event location (physical address or 'Online' for virtual events)"
     )
     
-    registration_link: Optional[HttpUrl] = Field(
+    registration_link: Optional[str] = Field(
         None,
         description="URL to register for the event or get more information"
     )
@@ -103,6 +103,10 @@ class ExtractedEvent(BaseModel):
         None,
         description="Cost information (e.g., 'Free', '$50', 'Members only')"
     )
+
+    model_config = {
+        "extra": "forbid"
+    }
     
     @field_validator('start_time', 'end_time')
     @classmethod
@@ -165,3 +169,7 @@ class EventExtractionResult(BaseModel):
         le=1.0,
         description="Confidence score for the extraction (0.0 to 1.0)"
     )
+
+    model_config = {
+        "extra": "forbid"
+    }
