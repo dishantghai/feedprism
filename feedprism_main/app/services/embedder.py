@@ -7,7 +7,7 @@ for semantic search.
 Author: FeedPrism Team
 """
 
-from typing import List, Union
+from typing import List, Union, Dict
 import numpy as np
 
 from sentence_transformers import SentenceTransformer
@@ -82,3 +82,25 @@ class EmbeddingService:
         except Exception as e:
             logger.error(f"Batch embedding failed: {e}")
             return [[0.0] * self.dimension] * len(texts)
+    def create_named_vectors(
+        self,
+        title: str,
+        description: str,
+        full_text: str
+    ) -> Dict[str, List[float]]:
+        """
+        Generate named vectors for multi-representation.
+        
+        Args:
+            title: Content title (for exact match priority)
+            description: Content description (for semantic match)
+            full_text: Full content (for comprehensive context)
+            
+        Returns:
+            Dictionary of named vectors
+        """
+        return {
+            "title": self.embed_text(title),
+            "description": self.embed_text(description or title),
+            "full_text": self.embed_text(full_text)
+        }

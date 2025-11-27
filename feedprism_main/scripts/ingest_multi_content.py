@@ -32,6 +32,7 @@ from app.services.parser import EmailParser
 from app.services.orchestrator import ExtractionOrchestrator
 from app.services.embedder import EmbeddingService
 from app.database.qdrant_client import QdrantService
+from app.services.deduplicator import DeduplicationService
 
 
 async def ingest_multi_content(
@@ -59,9 +60,10 @@ async def ingest_multi_content(
     orchestrator = ExtractionOrchestrator()  # ← Phase 2: Use orchestrator
     embedder = EmbeddingService()
     qdrant = QdrantService()
+    deduplicator = DeduplicationService()
     
-    # Create collection
-    qdrant.create_collection(recreate=False)
+    # Create collections
+    qdrant.create_all_collections(recreate=False)
     
     # Fetch emails
     logger.info(f"\n📧 Fetching emails (last {days_back} days, max {max_emails})...")
@@ -114,14 +116,25 @@ async def ingest_multi_content(
             
             # Process EVENTS
             for event in result['events']:
-                text_to_embed = f"{event.title} {event.description or ''}"
-                vector = embedder.embed_text(text_to_embed)
+                # Named vectors
+                vectors = embedder.create_named_vectors(
+                    title=event.title,
+                    description=event.description or "",
+                    full_text=f"{event.title} {event.description} {event.location}"
+                )
+                
+                # Deduplication
+                canonical_id = deduplicator.compute_canonical_id(event.title, "event")
+                duplicates = deduplicator.find_duplicates(event.title, event.description or "", "events")
                 
                 point = PointStruct(
                     id=str(uuid.uuid4()),
-                    vector=vector,
+                    vector=vectors,
                     payload={
-                        "content_type": "event",  # ← Phase 2: Standardized field
+                        "content_type": "event",
+                        "canonical_item_id": canonical_id,
+                        "is_duplicate": len(duplicates) > 0,
+                        "duplicate_count": len(duplicates),
                         "title": event.title,
                         "description": event.description,
                         "start_time": event.start_time,
@@ -143,14 +156,25 @@ async def ingest_multi_content(
             
             # Process COURSES
             for course in result['courses']:
-                text_to_embed = f"{course.title} {course.description or ''}"
-                vector = embedder.embed_text(text_to_embed)
+                # Named vectors
+                vectors = embedder.create_named_vectors(
+                    title=course.title,
+                    description=course.description or "",
+                    full_text=f"{course.title} {course.description} {course.provider}"
+                )
+                
+                # Deduplication
+                canonical_id = deduplicator.compute_canonical_id(course.title, "course")
+                duplicates = deduplicator.find_duplicates(course.title, course.description or "", "courses")
                 
                 point = PointStruct(
                     id=str(uuid.uuid4()),
-                    vector=vector,
+                    vector=vectors,
                     payload={
-                        "content_type": "course",  # ← Phase 2: Standardized field
+                        "content_type": "course",
+                        "canonical_item_id": canonical_id,
+                        "is_duplicate": len(duplicates) > 0,
+                        "duplicate_count": len(duplicates),
                         "title": course.title,
                         "description": course.description,
                         "provider": course.provider,
@@ -173,14 +197,25 @@ async def ingest_multi_content(
             
             # Process BLOGS
             for blog in result['blogs']:
-                text_to_embed = f"{blog.title} {blog.description or ''}"
-                vector = embedder.embed_text(text_to_embed)
+                # Named vectors
+                vectors = embedder.create_named_vectors(
+                    title=blog.title,
+                    description=blog.description or "",
+                    full_text=f"{blog.title} {blog.description} {blog.author}"
+                )
+                
+                # Deduplication
+                canonical_id = deduplicator.compute_canonical_id(blog.title, "blog")
+                duplicates = deduplicator.find_duplicates(blog.title, blog.description or "", "blogs")
                 
                 point = PointStruct(
                     id=str(uuid.uuid4()),
-                    vector=vector,
+                    vector=vectors,
                     payload={
-                        "content_type": "blog",  # ← Phase 2: Standardized field
+                        "content_type": "blog",
+                        "canonical_item_id": canonical_id,
+                        "is_duplicate": len(duplicates) > 0,
+                        "duplicate_count": len(duplicates),
                         "title": blog.title,
                         "description": blog.description,
                         "author": blog.author,
@@ -217,12 +252,27 @@ async def ingest_multi_content(
             stats["emails_failed"] += 1
             continue
     
-    # Store all points
-    if all_points:
-        logger.info(f"\n💾 Storing {len(all_points)} items in Qdrant...")
-        qdrant.upsert_points(all_points)
+    # Store points by type
+    points_by_type = {"events": [], "courses": [], "blogs": []}
+    
+    for point in all_points:
+        ctype = point.payload.get("content_type")
+        if ctype == "event":
+            points_by_type["events"].append(point)
+        elif ctype == "course":
+            points_by_type["courses"].append(point)
+        elif ctype == "blog":
+            points_by_type["blogs"].append(point)
+            
+    if any(points_by_type.values()):
+        logger.info(f"\n💾 Storing items in Qdrant...")
+        
+        for ctype, points in points_by_type.items():
+            if points:
+                qdrant.upsert_by_type(ctype, points)
+                logger.success(f"Stored {len(points)} {ctype}")
+                
         stats["total_points_stored"] = len(all_points)
-        logger.success(f"Stored {len(all_points)} items")
     
     # Summary
     logger.info("\n" + "=" * 70)
@@ -262,9 +312,22 @@ async def search_by_content_type(
     
     query_vector = embedder.embed_text(query)
     
+    # Map singular type to plural collection name
+    type_map = {
+        "event": "events",
+        "course": "courses",
+        "blog": "blogs"
+    }
+    collection_type = type_map.get(content_type)
+    
+    if not collection_type:
+        logger.error(f"Invalid content type: {content_type}")
+        return []
+
     # Phase 2: Filter by content_type
     results = qdrant.search(
         query_vector=query_vector,
+        content_type=collection_type,
         limit=limit,
         filter_dict={"content_type": content_type}
     )

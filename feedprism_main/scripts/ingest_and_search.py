@@ -57,8 +57,8 @@ async def ingest_emails(
     embedder = EmbeddingService()
     qdrant = QdrantService()
     
-    # Create collection
-    qdrant.create_collection(recreate=False)
+    # Create collections
+    qdrant.create_all_collections(recreate=False)
     
     # Fetch emails
     logger.info(f"\n📧 Fetching emails (last {days_back} days, max {max_emails})...")
@@ -138,7 +138,7 @@ async def ingest_emails(
     # Store all points
     if all_points:
         logger.info(f"\n💾 Storing {len(all_points)} events in Qdrant...")
-        qdrant.upsert_points(all_points)
+        qdrant.upsert_by_type("events", all_points)
         stats["points_stored"] = len(all_points)
         logger.success(f"Stored {len(all_points)} events")
     
@@ -175,6 +175,7 @@ async def search_events(query: str, limit: int = 5) -> List[Dict[str, Any]]:
     
     results = qdrant.search(
         query_vector=query_vector,
+        content_type="events",
         limit=limit,
         filter_dict={"type": "event"}
     )

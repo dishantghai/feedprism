@@ -27,9 +27,9 @@ def verify_phase_3():
     qdrant = QdrantService()
     embedder = EmbeddingService()
     
-    # 2. Recreate Collection (to enable sparse vectors)
-    print("\n📦 Recreating collection with sparse vector support...")
-    qdrant.create_collection(recreate=True)
+    # 2. Recreate Collections (to enable sparse vectors)
+    print("\n📦 Recreating collections with sparse vector support...")
+    qdrant.create_all_collections(recreate=True)
     
     # 3. Prepare Test Data
     print("\n📝 Preparing test data...")
@@ -108,7 +108,14 @@ def verify_phase_3():
         
     # 4. Upsert Data
     print(f"\n📤 Upserting {len(points)} points...")
-    qdrant.upsert_points(points)
+    
+    events_points = [p for p in points if p.payload["content_type"] == "event"]
+    blogs_points = [p for p in points if p.payload["content_type"] == "blog"]
+    
+    if events_points:
+        qdrant.upsert_by_type("events", events_points)
+    if blogs_points:
+        qdrant.upsert_by_type("blogs", blogs_points)
     
     # Wait for indexing
     time.sleep(2)
@@ -119,9 +126,9 @@ def verify_phase_3():
     query = "machine learning"
     query_vec = embedder.embed_text(query)
     
-    # Test 5.1: Hybrid Search
-    print(f"\n--- Hybrid Search for '{query}' ---")
-    results = qdrant.hybrid_search(query_vec, query, limit=3)
+    # Test 5.1: Hybrid Search (Events)
+    print(f"\n--- Hybrid Search for '{query}' (Events) ---")
+    results = qdrant.hybrid_search(query_vec, query, content_type="events", limit=3)
     for res in results:
         print(f"  - [{res['payload']['content_type']}] {res['payload']['title']}")
         

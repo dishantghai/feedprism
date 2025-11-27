@@ -7,7 +7,7 @@ vector search, and payload filtering.
 Author: FeedPrism Team
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Literal
 from datetime import datetime, timedelta
 
 from qdrant_client import QdrantClient as QdrantClientSDK
@@ -21,13 +21,15 @@ from qdrant_client.models import (
     Filter,
     FieldCondition,
     MatchValue,
-    Range
+    Range,
+    HnswConfigDiff
 )
 from loguru import logger
 
 from app.config import settings
 from app.utils.sparse_vector import create_sparse_vector
 
+ContentType = Literal["events", "courses", "blogs"]
 
 class QdrantService:
     """
@@ -36,129 +38,122 @@ class QdrantService:
     Handles collection management, point upsert, vector search, and payload filtering
     for multi-content type storage (events, courses, blogs).
     
-    Recommended Payload Structure:
-        For Phase 2+ multi-content storage, use this standardized structure:
-        
-        {
-            "content_type": "event|course|blog",  # Required for filtering
-            "title": str,                          # Content title
-            "description": str,                    # Content description
-            "source_email_id": str,               # Gmail message ID
-            "source_subject": str,                # Email subject
-            "source_from": str,                   # Email sender
-            "extracted_at": str,                  # ISO 8601 timestamp
-            "tags": List[str],                    # Content tags
-            
-            # Type-specific fields (optional)
-            "start_time": str,                    # Events only
-            "location": str,                      # Events only
-            "provider": str,                      # Courses only
-            "author": str,                        # Blogs only
-            "url": str,                           # Courses/Blogs
-            # ... other fields as needed
-        }
-    
-    Example Usage:
-        >>> qdrant = QdrantService()
-        >>> qdrant.create_collection()
-        >>> 
-        >>> # Store event with content_type
-        >>> point = PointStruct(
-        ...     id="uuid",
-        ...     vector=[...],
-        ...     payload={"content_type": "event", "title": "AI Conference"}
-        ... )
-        >>> qdrant.upsert_points([point])
-        >>> 
-        >>> # Search only courses
-        >>> results = qdrant.search(
-        ...     query_vector=[...],
-        ...     filter_dict={"content_type": "course"}
-        ... )
+    Architecture (Phase 4+):
+        - feedprism_events: HNSW m=16, ef=200 (High Recall)
+        - feedprism_courses: HNSW m=24, ef=100 (Balanced)
+        - feedprism_blogs: HNSW m=16, ef=150 (Fast)
     """
     
     def __init__(
         self,
         host: str = None,
-        port: int = None,
-        collection_name: str = None
+        port: int = None
     ):
         """Initialize Qdrant client."""
         self.host = host or settings.qdrant_host
         self.port = port or settings.qdrant_port
-        self.collection_name = collection_name or settings.qdrant_collection_name
         self.vector_size = settings.embedding_dimension
+        
+        # Map content types to collection names
+        self.collections = {
+            "events": "feedprism_events",
+            "courses": "feedprism_courses",
+            "blogs": "feedprism_blogs"
+        }
         
         logger.info(f"Connecting to Qdrant: {self.host}:{self.port}")
         self.client = QdrantClientSDK(host=self.host, port=self.port)
         logger.success("Qdrant client initialized")
     
-    def create_collection(self, recreate: bool = False) -> None:
+    def get_collection_name(self, content_type: ContentType) -> str:
+        """Get collection name for content type."""
+        return self.collections.get(content_type)
+
+    def create_all_collections(self, recreate: bool = False) -> None:
         """
-        Create Qdrant collection for events.
+        Create type-specific collections with optimized HNSW.
         
         Args:
-            recreate: If True, delete existing collection first
+            recreate: If True, delete existing collections first
         """
-        if recreate and self.client.collection_exists(self.collection_name):
-            logger.warning(f"Deleting existing collection: {self.collection_name}")
-            self.client.delete_collection(self.collection_name)
+        # HNSW tuning per content type
+        hnsw_configs = {
+            "events": HnswConfigDiff(m=16, ef_construct=200),  # High recall
+            "courses": HnswConfigDiff(m=24, ef_construct=100), # Balanced
+            "blogs": HnswConfigDiff(m=16, ef_construct=150)    # Fast retrieval
+        }
         
-        if not self.client.collection_exists(self.collection_name):
-            logger.info(f"Creating collection: {self.collection_name}")
+        for content_type, collection_name in self.collections.items():
+            if recreate and self.client.collection_exists(collection_name):
+                logger.warning(f"Deleting existing collection: {collection_name}")
+                self.client.delete_collection(collection_name)
             
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=VectorParams(
-                    size=self.vector_size,
-                    distance=Distance.COSINE
-                ),
-                sparse_vectors_config={
-                    "keywords": SparseVectorParams()
-                }
-            )
-            
-            logger.success(f"Collection created: {self.collection_name}")
-        else:
-            logger.info(f"Collection already exists: {self.collection_name}")
-    
-    def upsert_points(self, points: List[PointStruct]) -> None:
+            if not self.client.collection_exists(collection_name):
+                logger.info(f"Creating collection: {collection_name}")
+                
+                self.client.create_collection(
+                    collection_name=collection_name,
+                    vectors_config={
+                        "title": VectorParams(size=self.vector_size, distance=Distance.COSINE),
+                        "description": VectorParams(size=self.vector_size, distance=Distance.COSINE),
+                        "full_text": VectorParams(size=self.vector_size, distance=Distance.COSINE)
+                    },
+                    sparse_vectors_config={
+                        "keywords": SparseVectorParams()
+                    },
+                    hnsw_config=hnsw_configs[content_type]
+                )
+                logger.success(f"Created {collection_name}")
+            else:
+                logger.info(f"Collection already exists: {collection_name}")
+
+    def upsert_by_type(self, content_type: ContentType, points: List[PointStruct]) -> None:
         """
-        Insert or update points in collection.
+        Upsert to type-specific collection.
         
         Args:
+            content_type: Type of content (events, courses, blogs)
             points: List of PointStruct objects
         """
         if not points:
-            logger.warning("No points to upsert")
+            logger.warning(f"No points to upsert for {content_type}")
             return
-        
-        logger.info(f"Upserting {len(points)} points to {self.collection_name}")
+            
+        collection = self.get_collection_name(content_type)
+        if not collection:
+            raise ValueError(f"Invalid content type: {content_type}")
+            
+        logger.info(f"Upserting {len(points)} points to {collection}")
         
         self.client.upsert(
-            collection_name=self.collection_name,
+            collection_name=collection,
             points=points
         )
         
-        logger.success(f"Upserted {len(points)} points")
+        logger.success(f"Upserted {len(points)} points to {collection}")
     
     def search(
         self,
         query_vector: List[float],
+        content_type: ContentType,
+        vector_name: str = "title",
         limit: int = 10,
         filter_dict: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """
-        Search for similar vectors.
+        Search for similar vectors in a specific collection.
         
         Args:
             query_vector: Query embedding
+            content_type: Type of content to search
+            vector_name: Name of vector to search (title, description, full_text)
             limit: Number of results to return
-            filter_dict: Optional payload filters (e.g., {"type": "event"})
-        
-        Returns:
-            List of search results with payload and score
+            filter_dict: Optional payload filters
         """
+        collection = self.get_collection_name(content_type)
+        if not collection:
+            raise ValueError(f"Invalid content type: {content_type}")
+
         # Build filter if provided
         search_filter = None
         if filter_dict:
@@ -171,17 +166,16 @@ class QdrantService:
             ]
             search_filter = Filter(must=conditions)
         
-        logger.info(f"Searching {self.collection_name} (limit={limit})")
+        logger.info(f"Searching {collection} using {vector_name} (limit={limit})")
         
         results = self.client.search(
-            collection_name=self.collection_name,
-            query_vector=query_vector,
+            collection_name=collection,
+            query_vector=(vector_name, query_vector),
             limit=limit,
             query_filter=search_filter
         )
         
-        # Convert to dict format
-        formatted_results = [
+        return [
             {
                 "id": result.id,
                 "score": result.score,
@@ -189,21 +183,74 @@ class QdrantService:
             }
             for result in results
         ]
+
+    def search_with_grouping(
+        self,
+        query_vector: List[float],
+        content_type: ContentType,
+        vector_name: str = "title",
+        limit: int = 10,
+        group_size: int = 3
+    ) -> List[Dict]:
+        """
+        Search with automatic deduplication using Grouping API.
         
-        logger.success(f"Found {len(formatted_results)} results")
-        return formatted_results
+        Args:
+            query_vector: Query embedding
+            content_type: Content type
+            vector_name: Vector to search
+            limit: Number of groups (unique items) to return
+            group_size: Max items per group
+        """
+        collection = self.get_collection_name(content_type)
+        if not collection:
+            raise ValueError(f"Invalid content type: {content_type}")
+            
+        results = self.client.search_groups(
+            collection_name=collection,
+            query_vector=(vector_name, query_vector),
+            limit=limit,
+            group_by="canonical_item_id",
+            group_size=group_size,
+            with_payload=True
+        )
+        
+        formatted = []
+        for group in results.groups:
+            canonical = group.hits[0]
+            sources = group.hits
+            
+            formatted.append({
+                "id": canonical.id,
+                "score": canonical.score,
+                "payload": canonical.payload,
+                "source_count": len(sources),
+                "sources": [
+                    {
+                        "email_id": hit.payload.get("source_email_id"), 
+                        "subject": hit.payload.get("source_subject")
+                    }
+                    for hit in sources
+                ]
+            })
+        
+        return formatted
 
     def hybrid_search(
         self,
         query_vector: List[float],
         query_text: str,
+        content_type: ContentType,
         limit: int = 10
     ) -> List[Dict]:
         """Hybrid search: dense + sparse with RRF fusion."""
+        collection = self.get_collection_name(content_type)
+        if not collection:
+            raise ValueError(f"Invalid content type: {content_type}")
         
         # Dense search
         dense_results = self.client.search(
-            collection_name=self.collection_name,
+            collection_name=collection,
             query_vector=query_vector,
             limit=limit * 2
         )
@@ -212,7 +259,7 @@ class QdrantService:
         sparse_vec_dict = create_sparse_vector(query_text)
         sparse_vec = SparseVector(**sparse_vec_dict)
         sparse_results = self.client.search(
-            collection_name=self.collection_name,
+            collection_name=collection,
             query_vector=NamedSparseVector(name="keywords", vector=sparse_vec),
             limit=limit * 2
         )
@@ -221,13 +268,12 @@ class QdrantService:
         fused_ids = self._rrf_fusion(dense_results, sparse_results, k=60)
         
         # Retrieve full payloads for top results
-        # Note: _rrf_fusion returns IDs. We need to fetch the points.
         top_ids = fused_ids[:limit]
         if not top_ids:
             return []
             
         points = self.client.retrieve(
-            collection_name=self.collection_name,
+            collection_name=collection,
             ids=top_ids
         )
         
@@ -239,7 +285,7 @@ class QdrantService:
                 point = point_map[pid]
                 ordered_results.append({
                     "id": point.id,
-                    "score": 0.0, # RRF doesn't give a meaningful probability score, just rank
+                    "score": 0.0, # RRF doesn't give a meaningful probability score
                     "payload": point.payload
                 })
                 
@@ -263,35 +309,32 @@ class QdrantService:
     def search_with_filters(
         self,
         query_vector: List[float],
-        content_type: Optional[str] = None,
+        content_type: ContentType,
         date_range: Optional[tuple] = None,
         tags: Optional[List[str]] = None,
         limit: int = 10
     ) -> List[Dict]:
         """Search with payload filters."""
+        collection = self.get_collection_name(content_type)
+        if not collection:
+            raise ValueError(f"Invalid content type: {content_type}")
         
         must_conditions = []
-        
-        # Filter by content type
-        if content_type:
-            must_conditions.append(
-                FieldCondition(key="content_type", match=MatchValue(value=content_type))
-            )
         
         # Filter by date range
         if date_range:
             start_date, end_date = date_range
-            # Convert to timestamps - Qdrant Range filter requires numeric values            # Data is stored as timestamps, so we must filter with timestamps
             if isinstance(start_date, str):
                 start_date = datetime.fromisoformat(start_date).timestamp()
             if isinstance(end_date, str):
                 end_date = datetime.fromisoformat(end_date).timestamp()
             must_conditions.append(
                 FieldCondition(
-                    key="start_date",  # This field stores timestamps
+                    key="start_date",
                     range=Range(gte=start_date, lte=end_date)
                 )
-            )        
+            )
+        
         # Filter by tags
         if tags:
             for tag in tags:
@@ -302,7 +345,7 @@ class QdrantService:
         query_filter = Filter(must=must_conditions) if must_conditions else None
         
         results = self.client.search(
-            collection_name=self.collection_name,
+            collection_name=collection,
             query_vector=query_vector,
             query_filter=query_filter,
             limit=limit
@@ -324,13 +367,12 @@ class QdrantService:
         limit: int = 10
     ) -> List[Dict]:
         """Search for upcoming events only."""
-        
         today = datetime.now().isoformat()
         future = (datetime.now() + timedelta(days=days_ahead)).isoformat()
         
         return self.search_with_filters(
             query_vector=query_vector,
-            content_type="event",
+            content_type="events",
             date_range=(today, future),
             limit=limit
         )
@@ -342,22 +384,25 @@ class QdrantService:
         limit: int = 10
     ) -> List[Dict]:
         """Search for recent blog posts."""
-        
         past = (datetime.now() - timedelta(days=days_back)).isoformat()
         today = datetime.now().isoformat()
         
         return self.search_with_filters(
             query_vector=query_vector,
-            content_type="blog",
+            content_type="blogs",
             date_range=(past, today),
             limit=limit
         )
     
-    def get_point(self, point_id: str) -> Optional[Dict[str, Any]]:
-        """Get single point by ID."""
+    def get_point(self, point_id: str, content_type: ContentType) -> Optional[Dict[str, Any]]:
+        """Get single point by ID from specific collection."""
+        collection = self.get_collection_name(content_type)
+        if not collection:
+            return None
+            
         try:
             point = self.client.retrieve(
-                collection_name=self.collection_name,
+                collection_name=collection,
                 ids=[point_id]
             )
             
@@ -373,23 +418,31 @@ class QdrantService:
             logger.error(f"Failed to get point {point_id}: {e}")
             return None
     
-    def delete_points(self, point_ids: List[str]) -> None:
-        """Delete points by IDs."""
-        logger.info(f"Deleting {len(point_ids)} points")
+    def delete_points(self, point_ids: List[str], content_type: ContentType) -> None:
+        """Delete points by IDs from specific collection."""
+        collection = self.get_collection_name(content_type)
+        if not collection:
+            return
+
+        logger.info(f"Deleting {len(point_ids)} points from {collection}")
         
         self.client.delete(
-            collection_name=self.collection_name,
+            collection_name=collection,
             points_selector=point_ids
         )
         
         logger.success(f"Deleted {len(point_ids)} points")
     
-    def get_collection_info(self) -> Dict[str, Any]:
+    def get_collection_info(self, content_type: ContentType) -> Dict[str, Any]:
         """Get collection statistics."""
-        info = self.client.get_collection(self.collection_name)
+        collection = self.get_collection_name(content_type)
+        if not collection:
+            return {}
+
+        info = self.client.get_collection(collection)
         
         return {
-            "name": self.collection_name,
+            "name": collection,
             "vectors_count": info.vectors_count,
             "points_count": info.points_count,
             "status": info.status
