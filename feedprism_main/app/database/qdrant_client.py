@@ -8,19 +8,25 @@ Author: FeedPrism Team
 """
 
 from typing import Any, Dict, List, Optional
+from datetime import datetime, timedelta
 
 from qdrant_client import QdrantClient as QdrantClientSDK
 from qdrant_client.models import (
     Distance,
     VectorParams,
+    SparseVectorParams,
+    SparseVector,
+    NamedSparseVector,
     PointStruct,
     Filter,
     FieldCondition,
-    MatchValue
+    MatchValue,
+    Range
 )
 from loguru import logger
 
 from app.config import settings
+from app.utils.sparse_vector import create_sparse_vector
 
 
 class QdrantService:
@@ -106,7 +112,10 @@ class QdrantService:
                 vectors_config=VectorParams(
                     size=self.vector_size,
                     distance=Distance.COSINE
-                )
+                ),
+                sparse_vectors_config={
+                    "keywords": SparseVectorParams()
+                }
             )
             
             logger.success(f"Collection created: {self.collection_name}")
@@ -183,6 +192,166 @@ class QdrantService:
         
         logger.success(f"Found {len(formatted_results)} results")
         return formatted_results
+
+    def hybrid_search(
+        self,
+        query_vector: List[float],
+        query_text: str,
+        limit: int = 10
+    ) -> List[Dict]:
+        """Hybrid search: dense + sparse with RRF fusion."""
+        
+        # Dense search
+        dense_results = self.client.search(
+            collection_name=self.collection_name,
+            query_vector=query_vector,
+            limit=limit * 2
+        )
+        
+        # Sparse search
+        sparse_vec_dict = create_sparse_vector(query_text)
+        sparse_vec = SparseVector(**sparse_vec_dict)
+        sparse_results = self.client.search(
+            collection_name=self.collection_name,
+            query_vector=NamedSparseVector(name="keywords", vector=sparse_vec),
+            limit=limit * 2
+        )
+        
+        # RRF Fusion
+        fused_ids = self._rrf_fusion(dense_results, sparse_results, k=60)
+        
+        # Retrieve full payloads for top results
+        # Note: _rrf_fusion returns IDs. We need to fetch the points.
+        top_ids = fused_ids[:limit]
+        if not top_ids:
+            return []
+            
+        points = self.client.retrieve(
+            collection_name=self.collection_name,
+            ids=top_ids
+        )
+        
+        # Map points back to order of top_ids
+        point_map = {point.id: point for point in points}
+        ordered_results = []
+        for pid in top_ids:
+            if pid in point_map:
+                point = point_map[pid]
+                ordered_results.append({
+                    "id": point.id,
+                    "score": 0.0, # RRF doesn't give a meaningful probability score, just rank
+                    "payload": point.payload
+                })
+                
+        return ordered_results
+
+    def _rrf_fusion(self, dense_results, sparse_results, k=60):
+        """Reciprocal Rank Fusion algorithm."""
+        scores = {}
+        
+        # Aggregate scores from both result sets
+        for rank, result in enumerate(dense_results, 1):
+            scores[result.id] = scores.get(result.id, 0) + 1 / (k + rank)
+        
+        for rank, result in enumerate(sparse_results, 1):
+            scores[result.id] = scores.get(result.id, 0) + 1 / (k + rank)
+        
+        # Sort by combined score
+        sorted_ids = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
+        return sorted_ids
+
+    def search_with_filters(
+        self,
+        query_vector: List[float],
+        content_type: Optional[str] = None,
+        date_range: Optional[tuple] = None,
+        tags: Optional[List[str]] = None,
+        limit: int = 10
+    ) -> List[Dict]:
+        """Search with payload filters."""
+        
+        must_conditions = []
+        
+        # Filter by content type
+        if content_type:
+            must_conditions.append(
+                FieldCondition(key="content_type", match=MatchValue(value=content_type))
+            )
+        
+        # Filter by date range
+        if date_range:
+            start_date, end_date = date_range
+            # Convert to timestamps - Qdrant Range filter requires numeric values            # Data is stored as timestamps, so we must filter with timestamps
+            if isinstance(start_date, str):
+                start_date = datetime.fromisoformat(start_date).timestamp()
+            if isinstance(end_date, str):
+                end_date = datetime.fromisoformat(end_date).timestamp()
+            must_conditions.append(
+                FieldCondition(
+                    key="start_date",  # This field stores timestamps
+                    range=Range(gte=start_date, lte=end_date)
+                )
+            )        
+        # Filter by tags
+        if tags:
+            for tag in tags:
+                must_conditions.append(
+                    FieldCondition(key="tags", match=MatchValue(value=tag))
+                )
+        
+        query_filter = Filter(must=must_conditions) if must_conditions else None
+        
+        results = self.client.search(
+            collection_name=self.collection_name,
+            query_vector=query_vector,
+            query_filter=query_filter,
+            limit=limit
+        )
+        
+        return [
+            {
+                "id": result.id,
+                "score": result.score,
+                "payload": result.payload
+            }
+            for result in results
+        ]
+
+    def search_upcoming_events(
+        self,
+        query_vector: List[float],
+        days_ahead: int = 30,
+        limit: int = 10
+    ) -> List[Dict]:
+        """Search for upcoming events only."""
+        
+        today = datetime.now().isoformat()
+        future = (datetime.now() + timedelta(days=days_ahead)).isoformat()
+        
+        return self.search_with_filters(
+            query_vector=query_vector,
+            content_type="event",
+            date_range=(today, future),
+            limit=limit
+        )
+
+    def search_recent_blogs(
+        self,
+        query_vector: List[float],
+        days_back: int = 7,
+        limit: int = 10
+    ) -> List[Dict]:
+        """Search for recent blog posts."""
+        
+        past = (datetime.now() - timedelta(days=days_back)).isoformat()
+        today = datetime.now().isoformat()
+        
+        return self.search_with_filters(
+            query_vector=query_vector,
+            content_type="blog",
+            date_range=(past, today),
+            limit=limit
+        )
     
     def get_point(self, point_id: str) -> Optional[Dict[str, Any]]:
         """Get single point by ID."""
