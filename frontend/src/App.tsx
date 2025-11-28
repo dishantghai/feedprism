@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Layout } from './components/layout';
 import { PrismOverview } from './components/prism';
+import { FeedList } from './components/feed';
 import { api } from './services/api';
 import type { MetricsResponse, ViewType } from './types';
 
@@ -61,9 +62,9 @@ function App() {
       {activeView === 'home' && (
         <HomeView loading={loading} error={error} />
       )}
-      {activeView === 'events' && <PlaceholderView type="events" />}
-      {activeView === 'courses' && <PlaceholderView type="courses" />}
-      {activeView === 'blogs' && <PlaceholderView type="blogs" />}
+      {activeView === 'events' && <FeedList filterType="event" title="Events" />}
+      {activeView === 'courses' && <FeedList filterType="course" title="Courses" />}
+      {activeView === 'blogs' && <FeedList filterType="blog" title="Blogs" />}
       {activeView === 'actions' && <PlaceholderView type="actions" />}
       {activeView === 'metrics' && (
         <MetricsView metrics={metrics} loading={loading} error={error} />
@@ -83,40 +84,25 @@ interface HomeViewProps {
   error: string | null;
 }
 
-function HomeView({ loading, error }: HomeViewProps) {
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 animate-spin text-[var(--color-accent-blue)]" />
-        <span className="ml-2 text-[var(--color-text-secondary)]">
-          Loading dashboard...
-        </span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="py-4 px-4 bg-red-50 rounded-lg border border-red-200">
-        <p className="text-red-600 text-sm">{error}</p>
-        <p className="text-red-500 text-xs mt-1">
-          Make sure the FastAPI backend is running on port 8000
-        </p>
-      </div>
-    );
-  }
-
+function HomeView({ error }: HomeViewProps) {
+  // Show error banner if metrics failed, but still render content
   return (
     <div className="space-y-6">
+      {/* Error banner (non-blocking) */}
+      {error && (
+        <div className="py-3 px-4 bg-red-50 rounded-lg border border-red-200">
+          <p className="text-red-600 text-sm">{error}</p>
+          <p className="text-red-500 text-xs mt-1">
+            Make sure the FastAPI backend is running on port 8000
+          </p>
+        </div>
+      )}
+
       {/* Prism Overview Section */}
       <PrismOverview />
 
-      {/* Placeholder for Feed (Phase 5) */}
-      <div className="p-8 border-2 border-dashed border-[var(--color-border-light)] rounded-xl text-center">
-        <p className="text-[var(--color-text-tertiary)]">
-          Intelligent Feed (Phase 5)
-        </p>
-      </div>
+      {/* Intelligent Feed */}
+      <FeedList title="Recent Extractions" />
     </div>
   );
 }

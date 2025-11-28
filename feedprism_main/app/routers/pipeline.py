@@ -80,7 +80,7 @@ def _parse_sender(from_header: str) -> tuple:
 
 
 @router.get("/unprocessed-emails")
-async def get_unprocessed_emails(
+def get_unprocessed_emails(
     hours_back: int = Query(None, description="Hours back to fetch (uses settings default if not provided)")
 ):
     """
