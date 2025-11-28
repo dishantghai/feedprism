@@ -447,3 +447,44 @@ class QdrantService:
             "points_count": info.points_count,
             "status": info.status
         }
+    
+    def get_processed_email_ids(self) -> set:
+        """
+        Get all unique source_email_id values from all collections.
+        
+        Used to filter out already-processed emails from Gmail fetch.
+        
+        Returns:
+            Set of email IDs that have been processed
+        """
+        processed_ids = set()
+        
+        for content_type in ["events", "courses", "blogs"]:
+            try:
+                collection = self.get_collection_name(content_type)
+                if not collection or not self.client.collection_exists(collection):
+                    continue
+                
+                offset = None
+                while True:
+                    batch, offset = self.client.scroll(
+                        collection_name=collection,
+                        limit=100,
+                        offset=offset,
+                        with_payload=["source_email_id"]
+                    )
+                    
+                    for point in batch:
+                        email_id = point.payload.get("source_email_id")
+                        if email_id:
+                            processed_ids.add(email_id)
+                    
+                    if offset is None:
+                        break
+                        
+            except Exception as e:
+                logger.warning(f"Error fetching processed IDs from {content_type}: {e}")
+                continue
+        
+        logger.info(f"Found {len(processed_ids)} processed email IDs")
+        return processed_ids

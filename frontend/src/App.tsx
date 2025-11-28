@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, FileText, Loader2, Zap } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Layout } from './components/layout';
+import { PrismOverview } from './components/prism';
 import { api } from './services/api';
 import type { MetricsResponse, ViewType } from './types';
 
@@ -58,7 +59,7 @@ function App() {
     >
       {/* Content based on active view */}
       {activeView === 'home' && (
-        <HomeView metrics={metrics} loading={loading} error={error} />
+        <HomeView loading={loading} error={error} />
       )}
       {activeView === 'events' && <PlaceholderView type="events" />}
       {activeView === 'courses' && <PlaceholderView type="courses" />}
@@ -78,12 +79,11 @@ function App() {
 // =============================================================================
 
 interface HomeViewProps {
-  metrics: MetricsResponse | null;
   loading: boolean;
   error: string | null;
 }
 
-function HomeView({ metrics, loading, error }: HomeViewProps) {
+function HomeView({ loading, error }: HomeViewProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -108,36 +108,8 @@ function HomeView({ metrics, loading, error }: HomeViewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard
-          label="Emails Processed"
-          value={metrics?.total_emails_processed ?? 0}
-          icon={<FileText className="w-4 h-4" />}
-        />
-        <StatCard
-          label="Items Extracted"
-          value={metrics?.total_items_extracted ?? 0}
-          icon={<Zap className="w-4 h-4" />}
-        />
-        <StatCard
-          label="Events"
-          value={metrics?.categories.find((c) => c.type === 'event')?.count ?? 0}
-          icon={<Calendar className="w-4 h-4 text-[var(--color-event)]" />}
-        />
-        <StatCard
-          label="Courses"
-          value={metrics?.categories.find((c) => c.type === 'course')?.count ?? 0}
-          icon={<GraduationCap className="w-4 h-4 text-[var(--color-course)]" />}
-        />
-      </div>
-
-      {/* Placeholder for Prism Overview (Phase 3) */}
-      <div className="p-8 border-2 border-dashed border-[var(--color-border-light)] rounded-xl text-center">
-        <p className="text-[var(--color-text-tertiary)]">
-          Prism Overview Section (Phase 3)
-        </p>
-      </div>
+      {/* Prism Overview Section */}
+      <PrismOverview />
 
       {/* Placeholder for Feed (Phase 5) */}
       <div className="p-8 border-2 border-dashed border-[var(--color-border-light)] rounded-xl text-center">
@@ -153,7 +125,13 @@ function HomeView({ metrics, loading, error }: HomeViewProps) {
 // Metrics View
 // =============================================================================
 
-function MetricsView({ metrics, loading, error }: HomeViewProps) {
+interface MetricsViewProps {
+  metrics: MetricsResponse | null;
+  loading: boolean;
+  error: string | null;
+}
+
+function MetricsView({ metrics, loading, error }: MetricsViewProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">

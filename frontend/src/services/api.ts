@@ -137,6 +137,143 @@ export async function getHealthCheck(): Promise<{
 }
 
 // =============================================================================
+// Pipeline API
+// =============================================================================
+
+export interface UnprocessedEmailsResponse {
+    unprocessed_count: number;
+    total_fetched: number;
+    processed_count: number;
+    hours_back: number;
+    emails: Array<{
+        id: string;
+        subject: string;
+        sender: string;
+        sender_email: string;
+        received_at: string;
+        snippet: string | null;
+        body_text?: string;
+        body_html?: string;
+    }>;
+}
+
+export interface PipelineSettings {
+    email_fetch_hours_back: number;
+    llm_model: string;
+    embedding_model: string;
+}
+
+export interface ExtractionEvent {
+    type: 'start' | 'fetch' | 'parse' | 'extract' | 'ingest' | 'progress' | 'skip' | 'error' | 'complete';
+    data: {
+        current?: number;
+        total?: number;
+        message: string;
+        email_id?: string;
+        subject?: string;
+        events?: number;
+        courses?: number;
+        blogs?: number;
+        events_total?: number;
+        courses_total?: number;
+        blogs_total?: number;
+        total_extracted?: number;
+        emails_processed?: number;
+        errors?: number;
+        error?: string;
+        reason?: string;
+    };
+}
+
+export async function getUnprocessedEmails(hoursBack?: number): Promise<UnprocessedEmailsResponse> {
+    const params = hoursBack ? `?hours_back=${hoursBack}` : '';
+    return fetchJson<UnprocessedEmailsResponse>(`${API_BASE}/pipeline/unprocessed-emails${params}`);
+}
+
+export async function getPipelineSettings(): Promise<PipelineSettings> {
+    return fetchJson<PipelineSettings>(`${API_BASE}/pipeline/settings`);
+}
+
+/**
+ * Start extraction pipeline with SSE streaming.
+ * Returns an EventSource that emits progress events.
+ */
+export function startExtraction(
+    emailIds: string[],
+    onEvent: (event: ExtractionEvent) => void,
+    onError: (error: Error) => void,
+    onComplete: () => void
+): () => void {
+    const controller = new AbortController();
+
+    fetch(`${API_BASE}/pipeline/extract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailIds),
+        signal: controller.signal,
+    })
+        .then(async (response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const reader = response.body?.getReader();
+            if (!reader) {
+                throw new Error('No response body');
+            }
+
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+
+                // Parse SSE events from buffer
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                let currentEvent: string | null = null;
+                let currentData: string | null = null;
+
+                for (const line of lines) {
+                    if (line.startsWith('event: ')) {
+                        currentEvent = line.slice(7);
+                    } else if (line.startsWith('data: ')) {
+                        currentData = line.slice(6);
+                    } else if (line === '' && currentEvent && currentData) {
+                        try {
+                            const parsed: ExtractionEvent = {
+                                type: currentEvent as ExtractionEvent['type'],
+                                data: JSON.parse(currentData),
+                            };
+                            onEvent(parsed);
+
+                            if (parsed.type === 'complete') {
+                                onComplete();
+                            }
+                        } catch (e) {
+                            console.error('Failed to parse SSE event:', e);
+                        }
+                        currentEvent = null;
+                        currentData = null;
+                    }
+                }
+            }
+        })
+        .catch((error) => {
+            if (error.name !== 'AbortError') {
+                onError(error);
+            }
+        });
+
+    // Return abort function
+    return () => controller.abort();
+}
+
+// =============================================================================
 // Export all as api object for convenience
 // =============================================================================
 
@@ -158,6 +295,11 @@ export const api = {
     // Metrics
     getMetrics,
     getHealthCheck,
+
+    // Pipeline
+    getUnprocessedEmails,
+    getPipelineSettings,
+    startExtraction,
 };
 
 export default api;

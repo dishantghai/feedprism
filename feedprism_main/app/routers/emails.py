@@ -2,18 +2,31 @@
 Emails Router
 
 Endpoints for raw email data (used in Prism visualization).
+Fetches real emails from Gmail using OAuth token.
 """
 
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
 from app.models.api import EmailSummary, EmailDetail, PrismStats, CategoryCount
 from app.database.qdrant_client import QdrantService
+from app.services.gmail_client import GmailClient
 
 router = APIRouter(prefix="/api/emails", tags=["emails"])
 
 qdrant = QdrantService()
+
+# Gmail client (lazy init to avoid auth errors on import)
+_gmail_client: Optional[GmailClient] = None
+
+
+def get_gmail_client() -> GmailClient:
+    """Get or create Gmail client instance."""
+    global _gmail_client
+    if _gmail_client is None:
+        _gmail_client = GmailClient()
+    return _gmail_client
 
 
 def _get_unique_emails_from_items() -> List[dict]:
@@ -62,23 +75,64 @@ def _get_unique_emails_from_items() -> List[dict]:
     return list(emails_map.values())
 
 
+def _parse_sender(from_header: str) -> tuple[str, str]:
+    """Parse 'From' header into name and email."""
+    import re
+    # Pattern: "Name <email@example.com>" or just "email@example.com"
+    match = re.match(r'^(.+?)\s*<(.+?)>$', from_header)
+    if match:
+        return match.group(1).strip().strip('"'), match.group(2).strip()
+    return from_header, from_header
+
+
 @router.get("/recent", response_model=List[EmailSummary])
 async def get_recent_emails(
-    limit: int = Query(10, ge=1, le=50, description="Number of emails to return")
+    limit: int = Query(10, ge=1, le=50, description="Number of emails to return"),
+    source: str = Query("gmail", description="Source: 'gmail' for live fetch, 'processed' for Qdrant")
 ):
     """
-    Get recent emails that have been processed.
+    Get recent emails.
+    
+    - source=gmail: Fetch live from Gmail API (raw inbox)
+    - source=processed: Get emails that have been processed (from Qdrant)
     
     Used for the Prism Overview visualization showing raw email feed.
     """
-    logger.info(f"Fetching recent emails: limit={limit}")
+    logger.info(f"Fetching recent emails: limit={limit}, source={source}")
     
+    if source == "gmail":
+        # Fetch live from Gmail
+        try:
+            gmail = get_gmail_client()
+            # Fetch recent emails (last 7 days, content-rich)
+            raw_emails = gmail.fetch_content_rich_emails(days_back=7, max_results=limit)
+            
+            # Get processed email IDs from Qdrant to show extracted count
+            processed_emails = {e["id"]: e["extracted_count"] for e in _get_unique_emails_from_items()}
+            
+            result = []
+            for email in raw_emails[:limit]:
+                sender_name, sender_email = _parse_sender(email.get("from", ""))
+                result.append(EmailSummary(
+                    id=email["id"],
+                    subject=email.get("subject", "No Subject"),
+                    sender=sender_name,
+                    sender_email=sender_email,
+                    received_at=email.get("date", ""),
+                    snippet=email.get("snippet", "")[:150] if email.get("snippet") else None,
+                    extracted_count=processed_emails.get(email["id"], 0)
+                ))
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Gmail fetch failed: {e}")
+            # Fallback to processed emails
+            logger.info("Falling back to processed emails from Qdrant")
+    
+    # Fallback: Get from Qdrant (processed emails)
     emails = _get_unique_emails_from_items()
-    
-    # Sort by received_at (newest first)
     emails.sort(key=lambda x: x.get("received_at", ""), reverse=True)
-    
-    # Limit results
     emails = emails[:limit]
     
     return [
@@ -100,16 +154,46 @@ async def get_prism_stats():
     """
     Get stats for the Prism Overview section.
     
-    Returns recent emails and category counts for the visualization.
+    Returns recent emails (from Gmail) and category counts (from Qdrant) for the visualization.
     """
     logger.info("Fetching Prism stats")
     
-    # Get recent emails
-    emails = _get_unique_emails_from_items()
-    emails.sort(key=lambda x: x.get("received_at", ""), reverse=True)
-    recent_emails = emails[:10]
+    # Get recent emails from Gmail (live fetch)
+    recent_emails = []
+    processed_emails_map = {e["id"]: e["extracted_count"] for e in _get_unique_emails_from_items()}
     
-    # Get category counts
+    try:
+        gmail = get_gmail_client()
+        raw_emails = gmail.fetch_content_rich_emails(days_back=7, max_results=10)
+        
+        for email in raw_emails[:10]:
+            sender_name, sender_email = _parse_sender(email.get("from", ""))
+            recent_emails.append(EmailSummary(
+                id=email["id"],
+                subject=email.get("subject", "No Subject"),
+                sender=sender_name,
+                sender_email=sender_email,
+                received_at=email.get("date", ""),
+                snippet=email.get("snippet", "")[:150] if email.get("snippet") else None,
+                extracted_count=processed_emails_map.get(email["id"], 0)
+            ))
+    except Exception as e:
+        logger.warning(f"Gmail fetch failed, using processed emails: {e}")
+        # Fallback to processed emails from Qdrant
+        emails = _get_unique_emails_from_items()
+        emails.sort(key=lambda x: x.get("received_at", ""), reverse=True)
+        for e in emails[:10]:
+            recent_emails.append(EmailSummary(
+                id=e["id"],
+                subject=e["subject"],
+                sender=e["sender"],
+                sender_email=e["sender_email"],
+                received_at=e["received_at"],
+                snippet=e["subject"][:100] if e["subject"] else None,
+                extracted_count=e["extracted_count"]
+            ))
+    
+    # Get category counts from Qdrant
     category_counts = []
     total_extracted = 0
     
@@ -139,18 +223,7 @@ async def get_prism_stats():
             ))
     
     return PrismStats(
-        recent_emails=[
-            EmailSummary(
-                id=e["id"],
-                subject=e["subject"],
-                sender=e["sender"],
-                sender_email=e["sender_email"],
-                received_at=e["received_at"],
-                snippet=e["subject"][:100] if e["subject"] else None,
-                extracted_count=e["extracted_count"]
-            )
-            for e in recent_emails
-        ],
+        recent_emails=recent_emails,
         category_counts=category_counts,
         total_extracted=total_extracted,
         last_sync=None  # TODO: Track last sync time

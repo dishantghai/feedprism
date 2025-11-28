@@ -116,6 +116,14 @@ class Settings(BaseSettings):
         description="Root directory for data storage"
     )
     
+    # Email Fetch Configuration
+    email_fetch_hours_back: int = Field(
+        default=8,
+        ge=1,
+        le=168,  # Max 1 week
+        description="Hours back to fetch emails for processing (default: 8 hours)"
+    )
+    
     # Pydantic Settings Configuration
     model_config = SettingsConfigDict(
         env_file=".env",

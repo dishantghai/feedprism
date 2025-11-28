@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.services.recommender import RecommendationService
 from app.services.analytics import AnalyticsService
 from app.routers import feed_router, emails_router, search_router, metrics_router
+from app.routers.pipeline import router as pipeline_router
 
 app = FastAPI(
     title="FeedPrism API",
@@ -29,6 +30,7 @@ app.include_router(feed_router)
 app.include_router(emails_router)
 app.include_router(search_router)
 app.include_router(metrics_router)
+app.include_router(pipeline_router)
 
 # Initialize services
 # We initialize them here to be reused across requests

@@ -284,29 +284,37 @@ open http://localhost:8000/docs
 
 ---
 
-### Phase 3: Prism Overview Section
-**Goal:** Implement collapsible hackathon visualization
+### Phase 3: Prism Overview Section ✅
+**Goal:** Implement collapsible hackathon visualization with live extraction demo
 
 #### 3.1 Create Prism Components
-- [ ] `PrismOverview.tsx` - Container with collapse logic
-- [ ] `RawFeedPanel.tsx` - Left panel showing raw emails
-- [ ] `PrismVisual.tsx` - Center prism with animation
-- [ ] `CategoryPanel.tsx` - Right panel with category counts
+- [x] `PrismOverview.tsx` - Container with collapse logic and extraction state management
+- [x] `RawFeedPanel.tsx` - Left panel showing unprocessed emails
+- [x] `PrismVisual.tsx` - Center prism image
+- [x] `ExtractionPanel.tsx` - Right panel with Extract button, progress, and results
 
 #### 3.2 Data Integration
-- [ ] Fetch recent emails from `/api/emails/recent`
-- [ ] Fetch category counts from `/api/metrics`
-- [ ] Real-time updates (optional)
+- [x] Fetch unprocessed emails from `/api/pipeline/unprocessed-emails`
+- [x] Filter out already-processed emails (check Qdrant)
+- [x] SSE streaming for extraction progress
 
-#### 3.3 Collapse Behavior
-- [ ] Expand/collapse animation (300ms)
-- [ ] Persist state in localStorage
-- [ ] Collapsed summary line
+#### 3.3 Extraction Pipeline
+- [x] `POST /api/pipeline/extract` - Full extraction with SSE progress
+- [x] Parse emails → LLM extraction → Embed → Ingest to Qdrant
+- [x] Real-time progress updates (fetch, parse, extract, ingest)
+- [x] Results summary (events, courses, blogs counts)
 
-#### 3.4 Verification
-- [ ] Prism visualization renders
-- [ ] Collapse/expand works smoothly
-- [ ] Data loads from API
+#### 3.4 Collapse Behavior
+- [x] Expand/collapse animation (300ms)
+- [x] Persist state in localStorage
+- [x] Collapsed summary line
+
+#### 3.5 Verification
+- [x] Prism visualization renders with image
+- [x] Collapse/expand works smoothly
+- [x] Unprocessed emails load from Gmail API
+- [x] Extract button triggers pipeline with progress
+- [x] Results display after extraction complete
 
 ---
 
@@ -474,7 +482,7 @@ open http://localhost:8000/docs
 | Phase 0: Backend API | ✅ Complete | Added feed, emails, search, metrics routers |
 | Phase 1: Frontend Setup | ✅ Complete | Vite + React + Tailwind + design tokens |
 | Phase 2: Layout & Sidebar | ✅ Complete | Arc-style sidebar with magenta+orange brand |
-| Phase 3: Prism Overview | 🔄 In Progress | |
+| Phase 3: Prism Overview | ✅ Complete | Demo mode with live extraction pipeline |
 | Phase 4: Command & Filters | 🔲 Not Started | |
 | Phase 5: Feed Cards | 🔲 Not Started | |
 | Phase 6: Metrics Panel | 🔲 Not Started | |
@@ -608,3 +616,71 @@ style: add animations and polish
 - Each phase builds on the previous one
 - Mock data can be used if backend is not ready
 - Design tokens from `visual_design_improvements.md` are the source of truth
+
+---
+
+## Future Optimizations
+
+### Performance Improvements (Post-Hackathon)
+
+1. **Processed Email ID Lookup Optimization**
+   - Current: Scrolls through all Qdrant collections to get `source_email_id` values
+   - Impact: O(n) where n = total items in Qdrant (~50-100ms for <1000 items)
+   - Future options:
+     - Create dedicated `processed_emails` collection with just IDs
+     - Use Redis/SQLite cache for O(1) lookup
+     - Implement Bloom filter for probabilistic fast check
+
+2. **SSE Connection Management**
+   - Add extraction job tracking to prevent duplicate runs
+   - Implement job queue for concurrent extraction requests
+   - Add ability to cancel in-progress extractions
+
+3. **Incremental Sync**
+   - Track last sync timestamp
+   - Only fetch emails newer than last sync
+   - Background sync with notifications
+
+---
+
+## Phase 3 Completion Log
+
+**Backend Files Created:**
+- `app/routers/pipeline.py` - Pipeline router with:
+  - `GET /api/pipeline/unprocessed-emails` - Fetch unprocessed emails from Gmail
+  - `POST /api/pipeline/extract` - Run extraction with SSE streaming
+  - `GET /api/pipeline/settings` - Get pipeline settings
+
+**Backend Files Modified:**
+- `app/config.py` - Added `email_fetch_hours_back` setting (default: 8 hours)
+- `app/database/qdrant_client.py` - Added `get_processed_email_ids()` method
+- `app/main.py` - Registered pipeline router
+
+**Frontend Files Created:**
+- `src/components/prism/ExtractionPanel.tsx` - Right panel with 4 states:
+  - Empty (all caught up)
+  - Ready (Extract button)
+  - Extracting (progress bar + running totals)
+  - Complete (results summary)
+
+**Frontend Files Modified:**
+- `src/services/api.ts` - Added pipeline API functions with SSE parsing
+- `src/components/prism/PrismOverview.tsx` - Rewritten for demo flow:
+  - Fetches unprocessed emails on load
+  - Manages extraction state machine
+  - Handles SSE events for progress
+- `src/components/prism/RawFeedPanel.tsx` - Added `title` prop
+- `src/components/prism/index.ts` - Export ExtractionPanel
+
+**Demo Flow:**
+1. Page loads → Fetches unprocessed emails from last 8 hours
+2. Left panel shows unprocessed emails
+3. Right panel shows "Extract Content" button
+4. Click Extract → SSE stream shows real-time progress
+5. Complete → Shows extraction summary (11 Events, 5 Courses, 17 Blogs)
+6. Refresh → Previously processed emails filtered out
+
+**Verified:**
+- Full extraction pipeline working end-to-end
+- SSE streaming progress updates in UI
+- Processed emails correctly filtered from subsequent loads
