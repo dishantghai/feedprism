@@ -230,57 +230,57 @@ open http://localhost:8000/docs
 
 ---
 
-### Phase 1: Frontend Project Setup
+### Phase 1: Frontend Project Setup ✅
 **Goal:** Initialize React + Vite + Tailwind with design tokens
 
 #### 1.1 Initialize Project
-- [ ] Create Vite React TypeScript project
-- [ ] Install dependencies (Tailwind, Lucide icons, clsx)
-- [ ] Configure Tailwind with design tokens from `visual_design_improvements.md`
+- [x] Create Vite React TypeScript project
+- [x] Install dependencies (Tailwind, Lucide icons, clsx)
+- [x] Configure Tailwind with design tokens from `visual_design_improvements.md`
 
 #### 1.2 Setup Design System
-- [ ] Create `index.css` with CSS variables (colors, spacing, typography)
-- [ ] Create base utility components (`Button`, `Badge`, `Skeleton`)
-- [ ] Setup dark mode support (optional)
+- [x] Create `index.css` with CSS variables (colors, spacing, typography)
+- [ ] Create base utility components (`Button`, `Badge`, `Skeleton`) — deferred to Phase 7
+- [ ] Setup dark mode support (optional) — deferred
 
 #### 1.3 Configure API Client
-- [ ] Create `services/api.ts` with fetch wrapper
-- [ ] Configure proxy to backend in `vite.config.ts`
-- [ ] Create TypeScript types matching backend models
+- [x] Create `services/api.ts` with fetch wrapper
+- [x] Configure proxy to backend in `vite.config.ts`
+- [x] Create TypeScript types matching backend models
 
 #### 1.4 Verification
-- [ ] `npm run dev` starts without errors
-- [ ] Design tokens visible in browser DevTools
-- [ ] API proxy works (test with `/api/feed`)
+- [x] `npm run dev` starts without errors
+- [x] Design tokens visible in browser DevTools
+- [x] API proxy works (test with `/api/metrics`)
 
 ---
 
-### Phase 2: Layout & Sidebar
+### Phase 2: Layout & Sidebar ✅
 **Goal:** Implement Arc-style sidebar with navigation
 
 #### 2.1 Create Layout Components
-- [ ] `Layout.tsx` - Main grid layout (sidebar + content)
-- [ ] `Sidebar.tsx` - Arc-style sidebar with sections
-- [ ] `MainContent.tsx` - Content area wrapper
+- [x] `Layout.tsx` - Main grid layout (sidebar + content)
+- [x] `Sidebar.tsx` - Arc-style sidebar with sections
+- [x] `MainContent.tsx` - Content area wrapper
 
 #### 2.2 Sidebar Features
-- [ ] Logo and branding
-- [ ] Command bar trigger (⌘K)
-- [ ] Pinned section (Home, Actions, Metrics)
-- [ ] Spaces section (Events, Courses, Blogs, Themes)
-- [ ] Raw Inbox link
-- [ ] Settings and user area
-- [ ] Collapsible behavior (responsive)
+- [x] Logo and branding (prism triangle + magenta→orange gradient)
+- [x] Command bar trigger (⌘K) — placeholder, wired in Phase 4
+- [x] Pinned section (Home, Actions, Metrics)
+- [x] Spaces section (Events, Courses, Blogs)
+- [x] Raw Inbox link
+- [x] Settings and user area
+- [ ] Collapsible behavior (responsive) — deferred to Phase 7
 
 #### 2.3 Navigation State
-- [ ] Active route highlighting
-- [ ] Badge counts from API
-- [ ] Hover states and transitions
+- [x] Active route highlighting
+- [x] Badge counts from API
+- [x] Hover states and transitions
 
 #### 2.4 Verification
-- [ ] Sidebar renders correctly
-- [ ] Navigation items clickable
-- [ ] Responsive collapse works
+- [x] Sidebar renders correctly (deep navy gradient background)
+- [x] Navigation items clickable (view routing works)
+- [ ] Responsive collapse works — deferred
 
 ---
 
@@ -472,13 +472,15 @@ open http://localhost:8000/docs
 | Phase | Status | Notes |
 |-------|--------|-------|
 | Phase 0: Backend API | ✅ Complete | Added feed, emails, search, metrics routers |
-| Phase 1: Frontend Setup | 🔲 Not Started | |
-| Phase 2: Layout & Sidebar | 🔲 Not Started | |
-| Phase 3: Prism Overview | 🔲 Not Started | |
+| Phase 1: Frontend Setup | ✅ Complete | Vite + React + Tailwind + design tokens |
+| Phase 2: Layout & Sidebar | ✅ Complete | Arc-style sidebar with magenta+orange brand |
+| Phase 3: Prism Overview | 🔄 In Progress | |
 | Phase 4: Command & Filters | 🔲 Not Started | |
 | Phase 5: Feed Cards | 🔲 Not Started | |
 | Phase 6: Metrics Panel | 🔲 Not Started | |
 | Phase 7: Polish | 🔲 Not Started | |
+
+---
 
 ## Phase 0 Completion Log
 
@@ -506,6 +508,72 @@ open http://localhost:8000/docs
 | GET | `/api/emails/{id}` | Email detail with extracted items |
 | GET | `/api/metrics` | Dashboard metrics |
 | GET | `/api/metrics/health` | Health check |
+
+---
+
+## Phase 1 Completion Log
+
+**Files Created:**
+- `frontend/vite.config.ts` - Vite config with Tailwind plugin and API proxy to port 8000
+- `frontend/src/index.css` - Design tokens (colors, typography, spacing, animations)
+- `frontend/src/types/index.ts` - TypeScript types matching backend Pydantic models
+- `frontend/src/services/api.ts` - API client for all backend endpoints
+- `frontend/src/lib/utils.ts` - Utility functions (cn, formatRelativeTime, getTypeColor, etc.)
+- `frontend/src/App.tsx` - Initial status page testing API connection
+
+**Design Tokens Applied:**
+- Magenta + Orange brand palette (`--color-prism-start: #EC4899`, `--color-prism-end: #F97316`)
+- Category colors: Events (magenta), Courses (orange), Blogs (amber), Actions (red)
+- Notion-inspired typography and spacing (8px grid)
+- Custom scrollbar styling
+- Animation keyframes (fadeIn, slideUp, shimmer)
+
+**Verified:**
+- Vite dev server running on port 5173
+- API proxy working (frontend → backend on port 8000)
+- Metrics fetched and displayed from `/api/metrics`
+
+---
+
+## Phase 2 Completion Log
+
+**Files Created:**
+- `frontend/src/components/layout/Sidebar.tsx` - Arc-style dark sidebar with:
+  - Prism logo mark (triangle + beam with magenta→orange gradient)
+  - Command bar trigger (⌘K placeholder)
+  - Pinned section (Home, Actions, Metrics)
+  - Spaces section (Events, Courses, Blogs with badge counts)
+  - Raw Inbox link
+  - Settings and user avatar
+  - Deep navy gradient background (`#0b0d1a` → `#222636`)
+- `frontend/src/components/layout/MainContent.tsx` - Content area wrapper with title/subtitle
+- `frontend/src/components/layout/Layout.tsx` - Main layout combining sidebar + content
+- `frontend/src/components/layout/index.ts` - Barrel exports
+
+**Files Modified:**
+- `frontend/src/App.tsx` - Refactored to use Layout with view routing:
+  - `VIEW_CONFIG` mapping for all views (home, events, courses, blogs, actions, metrics, inbox, settings)
+  - `HomeView` with stat cards and placeholders for Prism/Feed
+  - `MetricsView` with quality metrics and top tags
+  - `PlaceholderView` for unimplemented views
+  - Sidebar badge counts extracted from metrics API
+- `frontend/src/index.css` - Updated design tokens:
+  - Lightened sidebar colors
+  - Magenta + Orange brand palette (removed purple)
+  - Updated badge background colors
+
+**Features Implemented:**
+- Sidebar navigation with active state highlighting
+- View routing driven by `activeView` state
+- Collapsible sections (Pinned, Spaces)
+- Badge counts from `/api/metrics`
+- Responsive layout shell
+
+**Verified:**
+- Sidebar renders with correct gradient background
+- Navigation between views works
+- Metrics displayed in Home and Metrics views
+- Prism logo displays with magenta→orange gradient
 
 ---
 
