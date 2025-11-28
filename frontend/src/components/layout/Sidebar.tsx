@@ -101,7 +101,7 @@ function Section({ title, icon, children, defaultOpen = true }: SectionProps) {
 
 export function Sidebar({ activeView, onViewChange, counts }: SidebarProps) {
     return (
-        <aside className="w-[var(--sidebar-width)] h-screen bg-[var(--color-sidebar-bg)] flex flex-col border-r border-[var(--color-sidebar-hover)]">
+        <aside className="w-[var(--sidebar-width)] h-screen flex flex-col border-r border-[var(--color-sidebar-hover)] bg-[linear-gradient(to_right,#0b0d1a_0%,#111326_40%,#1b1f30_80%,#222636_100%)]">
             {/* Logo / Prism Mark */}
             <div className="p-4 flex items-center gap-2">
                 <div className="w-9 h-9 rounded-xl bg-[radial-gradient(circle_at_30%_0%,_rgba(255,255,255,0.35),_transparent_55%),_linear-gradient(to_br,_var(--color-prism-start),_var(--color-prism-end))] flex items-center justify-center relative overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
