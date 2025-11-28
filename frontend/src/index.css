@@ -1,0 +1,253 @@
+@import "tailwindcss";
+
+/* =============================================================================
+   FeedPrism Design Tokens - Notion + Arc Browser Inspired
+   Based on visual_design_improvements.md
+   ============================================================================= */
+
+:root {
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Fira Mono", Menlo, monospace;
+
+  /* Notion-inspired Colors - Light Mode */
+  --color-text-primary: #37352F;
+  --color-text-secondary: #787774;
+  --color-text-tertiary: #9B9A97;
+  --color-text-placeholder: #C4C4C4;
+
+  /* Backgrounds */
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #FBFBFA;
+  --color-bg-tertiary: #F7F6F3;
+  --color-bg-hover: #EFEFEF;
+  --color-bg-active: #E8E8E6;
+
+  /* Arc-style Sidebar */
+  --color-sidebar-bg: #1C1C1E;
+  --color-sidebar-text: #E5E5E5;
+  --color-sidebar-text-muted: #8E8E93;
+  --color-sidebar-hover: #2C2C2E;
+  --color-sidebar-active: #3A3A3C;
+
+  /* Borders */
+  --color-border-light: #E8E8E6;
+  --color-border-medium: #DFDFDE;
+  --color-border-dark: #C4C4C4;
+
+  /* Semantic Colors */
+  --color-accent-blue: #2383E2;
+  --color-accent-purple: #9065B0;
+  --color-accent-teal: #0F7B6C;
+  --color-accent-orange: #D9730D;
+  --color-accent-red: #E03E3E;
+  --color-accent-green: #0F7B6C;
+
+  /* Category Colors */
+  --color-event: #2383E2;
+  --color-course: #9065B0;
+  --color-blog: #D9730D;
+  --color-action: #E03E3E;
+
+  /* Prism Gradient */
+  --color-prism-start: #667EEA;
+  --color-prism-end: #764BA2;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.08);
+  --shadow-command: 0 16px 70px rgba(0, 0, 0, 0.2);
+
+  /* Spacing (8px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Transitions */
+  --transition-fast: 100ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+
+  /* Sidebar Width */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 48px;
+}
+
+/* Dark Mode */
+.dark {
+  --color-text-primary: #E5E5E5;
+  --color-text-secondary: #9B9A97;
+  --color-text-tertiary: #787774;
+  --color-text-placeholder: #5A5A5A;
+
+  --color-bg-primary: #191919;
+  --color-bg-secondary: #202020;
+  --color-bg-tertiary: #2D2D2D;
+  --color-bg-hover: #363636;
+  --color-bg-active: #404040;
+
+  --color-border-light: #2D2D2D;
+  --color-border-medium: #363636;
+  --color-border-dark: #404040;
+}
+
+/* =============================================================================
+   Base Styles
+   ============================================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  line-height: 1.5;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+}
+
+/* =============================================================================
+   Typography
+   ============================================================================= */
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-primary);
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1rem; }
+
+p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+a {
+  color: var(--color-accent-blue);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* =============================================================================
+   Scrollbar Styling (Notion-like)
+   ============================================================================= */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-medium);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-dark);
+}
+
+/* =============================================================================
+   Utility Classes
+   ============================================================================= */
+
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+
+.bg-primary { background-color: var(--color-bg-primary); }
+.bg-secondary { background-color: var(--color-bg-secondary); }
+.bg-tertiary { background-color: var(--color-bg-tertiary); }
+
+/* Category badge colors */
+.badge-event { background-color: rgba(35, 131, 226, 0.1); color: var(--color-event); }
+.badge-course { background-color: rgba(144, 101, 176, 0.1); color: var(--color-course); }
+.badge-blog { background-color: rgba(217, 115, 13, 0.1); color: var(--color-blog); }
+.badge-action { background-color: rgba(224, 62, 62, 0.1); color: var(--color-action); }
+
+/* Focus styles for accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-accent-blue);
+  outline-offset: 2px;
+}
+
+/* =============================================================================
+   Animation Keyframes
+   ============================================================================= */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-normal) ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp var(--transition-slow) ease-out;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-tertiary) 25%,
+    var(--color-bg-hover) 50%,
+    var(--color-bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
