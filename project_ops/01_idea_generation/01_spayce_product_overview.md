@@ -1,4 +1,4 @@
-# Product Overview: Personal Learning Management System
+# Spayce - Product Overview: Personal Learning Management System
 
 ## Core Vision
 

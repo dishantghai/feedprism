@@ -1,8 +1,34 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from app.services.recommender import RecommendationService
 from app.services.analytics import AnalyticsService
+from app.routers import feed_router, emails_router, search_router, metrics_router
 
-app = FastAPI(title="FeedPrism API")
+app = FastAPI(
+    title="FeedPrism API",
+    description="Email intelligence API for extracting and organizing content",
+    version="1.0.0"
+)
+
+# CORS middleware for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:3000",  # Alternative dev port
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Register routers
+app.include_router(feed_router)
+app.include_router(emails_router)
+app.include_router(search_router)
+app.include_router(metrics_router)
 
 # Initialize services
 # We initialize them here to be reused across requests
@@ -11,7 +37,7 @@ analytics = AnalyticsService()
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to FeedPrism API"}
+    return {"message": "Welcome to FeedPrism API", "docs": "/docs"}
 
 @app.get("/api/recommendations/{item_id}")
 async def get_recommendations(item_id: str, content_type: str, limit: int = 5):
