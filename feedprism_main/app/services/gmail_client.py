@@ -104,25 +104,40 @@ class GmailClient:
             logger.error(f"Gmail API error: {error}")
             raise
     
-    def get_message(self, message_id: str) -> Dict[str, Any]:
-        """Fetch a single Gmail message by ID."""
-        try:
-            message = self.service.users().messages().get(
-                userId=self.user_id,
-                id=message_id,
-                format='full'
-            ).execute()
-            return message
-        except HttpError as error:
-            logger.error(f"Failed to fetch message {message_id}: {error}")
-            raise
+    def get_message(self, message_id: str, retries: int = 3) -> Dict[str, Any]:
+        """Fetch a single Gmail message by ID with retry logic."""
+        import time
+        
+        for attempt in range(retries):
+            try:
+                message = self.service.users().messages().get(
+                    userId=self.user_id,
+                    id=message_id,
+                    format='full'
+                ).execute()
+                return message
+            except HttpError as error:
+                logger.error(f"Failed to fetch message {message_id}: {error}")
+                raise
+            except Exception as e:
+                # SSL errors, connection errors - retry
+                if attempt < retries - 1:
+                    wait_time = (attempt + 1) * 2  # 2s, 4s, 6s
+                    logger.warning(f"Retry {attempt + 1}/{retries} for {message_id}: {e}")
+                    time.sleep(wait_time)
+                else:
+                    raise
     
     def get_messages_batch(self, message_ids: List[str]) -> List[Dict[str, Any]]:
-        """Fetch multiple messages with progress logging."""
+        """Fetch multiple messages with progress logging and error resilience."""
+        import time
+        
         total = len(message_ids)
         logger.info(f"Fetching {total} messages...")
         
         messages = []
+        failed_count = 0
+        
         for i, msg_id in enumerate(message_ids):
             try:
                 message = self.get_message(msg_id)
@@ -130,13 +145,19 @@ class GmailClient:
                 # Log progress every 10 messages
                 if (i + 1) % 10 == 0:
                     logger.info(f"Fetched {i + 1}/{total} messages")
+                # Small delay to avoid rate limiting
+                time.sleep(0.1)
             except HttpError as e:
                 logger.warning(f"Skipping message {msg_id}: {e}")
+                failed_count += 1
                 continue
             except Exception as e:
-                logger.warning(f"Error fetching {msg_id}: {e}")
+                logger.warning(f"Skipping {msg_id} after retries: {e}")
+                failed_count += 1
                 continue
         
+        if failed_count > 0:
+            logger.warning(f"Failed to fetch {failed_count}/{total} messages")
         logger.success(f"Fetched {len(messages)}/{total} messages")
         return messages
     

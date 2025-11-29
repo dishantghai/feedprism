@@ -33,6 +33,11 @@ _parser = None
 _orchestrator = None
 _embedder = None
 
+# Lock to prevent concurrent Gmail API calls (causes SSL issues)
+import threading
+_gmail_lock = threading.Lock()
+_fetch_in_progress = False
+
 
 def get_gmail() -> GmailClient:
     global _gmail_client
@@ -88,10 +93,19 @@ def get_unprocessed_emails(
     
     Compares Gmail emails against Qdrant to find unprocessed ones.
     """
+    global _fetch_in_progress
+    
+    # Prevent concurrent fetches (causes SSL issues)
+    if _fetch_in_progress:
+        logger.warning("Email fetch already in progress, returning cached or empty")
+        raise HTTPException(status_code=429, detail="Email fetch already in progress. Please wait.")
+    
     hours = hours_back or settings.email_fetch_hours_back
     logger.info(f"Fetching unprocessed emails from last {hours} hours")
     
     try:
+        _fetch_in_progress = True
+        
         gmail = get_gmail()
         qdrant = get_qdrant()
         
@@ -101,8 +115,19 @@ def get_unprocessed_emails(
         # Fetch recent emails from Gmail
         # Convert hours to days (minimum 1 day for Gmail API)
         days_back = max(1, hours // 24 + 1)
-        # Limit to 20 emails for faster response - user can extract more later
-        raw_emails = gmail.fetch_content_rich_emails(days_back=days_back, max_results=20)
+        # Limit to 15 emails for faster response and fewer SSL issues
+        raw_emails = gmail.fetch_content_rich_emails(days_back=days_back, max_results=15)
+        
+        # If we got some emails, continue even if there were some failures
+        if not raw_emails:
+            logger.warning("No emails fetched from Gmail")
+            return {
+                "unprocessed_count": 0,
+                "total_fetched": 0,
+                "processed_count": len(processed_ids),
+                "hours_back": hours,
+                "emails": []
+            }
         
         # Filter to only unprocessed emails within the time window
         from datetime import datetime, timedelta
@@ -146,6 +171,8 @@ def get_unprocessed_emails(
     except Exception as e:
         logger.error(f"Failed to get unprocessed emails: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        _fetch_in_progress = False
 
 
 async def _extraction_stream(email_ids: List[str]) -> AsyncGenerator[str, None]:

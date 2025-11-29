@@ -270,6 +270,56 @@ def _point_to_feed_item(point, item_type: str) -> FeedItem:
 
 ---
 
+## Enhancement 6: Gmail & Pipeline Robustness
+
+**Files:**
+- `feedprism_main/app/services/gmail_client.py`
+- `feedprism_main/app/routers/pipeline.py`
+
+### 6.1 GmailClient Retries & Resilience
+
+**File:** `feedprism_main/app/services/gmail_client.py`
+
+- Added **retry logic** to `get_message`:
+  - Signature: `get_message(self, message_id: str, retries: int = 3)`
+  - Retries on non-`HttpError` exceptions (e.g., transient SSL / connection errors).
+  - Uses backoff: waits **2s, 4s, 6s** between attempts.
+  - Logs each retry with the attempt number and error.
+
+- Hardened `get_messages_batch`:
+  - Logs total count and progress every 10 messages.
+  - Adds a small **100ms delay** between individual message fetches to reduce rate limiting.
+  - Skips failed messages instead of aborting the whole batch.
+  - Logs summary: `Failed to fetch X/Y messages` + `Fetched N/Y messages`.
+
+### 6.2 /unprocessed-emails Endpoint Guard Rails
+
+**File:** `feedprism_main/app/routers/pipeline.py`
+
+- Added a **global in-flight guard** to prevent concurrent Gmail fetches:
+  - Global flag: `_fetch_in_progress: bool`.
+  - At the top of `get_unprocessed_emails`:
+    - If a fetch is already running, respond with **HTTP 429** and message:
+      - `"Email fetch already in progress. Please wait."`
+  - Sets `_fetch_in_progress = True` at the start of the try block.
+  - Resets `_fetch_in_progress = False` in a `finally` block so it recovers even on errors.
+
+- Tuned Gmail fetch size for stability:
+  - Reduced `max_results` used by the pipeline from **50 → 20 → 15**:
+    - `raw_emails = gmail.fetch_content_rich_emails(days_back=days_back, max_results=15)`
+  - Purpose: limit per-call load on Gmail, reduce SSL and rate-limit issues for large mailboxes.
+
+- Safe behavior when Gmail returns no emails:
+  - If `raw_emails` is empty, the endpoint returns a valid payload with:
+    - `unprocessed_count = 0`
+    - `total_fetched = 0`
+    - `emails = []`
+  - Avoids 500s in the "no matching emails" case.
+
+Overall, these changes make the Phase 5 pipeline demo much more robust against flaky networks, SSL hiccups, and users clicking "Refresh" multiple times.
+
+---
+
 ## Files Modified
 
 | File | Changes |
