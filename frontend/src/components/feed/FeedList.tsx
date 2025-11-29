@@ -208,8 +208,8 @@ export function FeedList({
             </div>
 
             {/* Summary */}
-            <div className="text-center py-4 text-xs text-[var(--color-text-tertiary)]">
-                {items.length} items from {emailGroups.length} emails
+            <div className="text-center py-6 text-xs text-[var(--color-text-tertiary)]">
+                Showing {items.length} items from {emailGroups.length} emails
             </div>
 
             {/* Detail Modal */}
@@ -225,24 +225,39 @@ export function FeedList({
     );
 }
 
-// Skeleton loader for feed card
+// Skeleton loader for feed card - matches FeedCard design
 function FeedCardSkeleton() {
     return (
-        <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border-light)] p-4 animate-pulse">
-            <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-[var(--color-border-medium)]" />
-                <div className="flex-1">
-                    <div className="h-4 w-32 bg-[var(--color-border-medium)] rounded mb-2" />
-                    <div className="h-4 w-full bg-[var(--color-border-medium)] rounded mb-3" />
-                    <div className="flex gap-2">
-                        <div className="h-5 w-16 bg-[var(--color-border-medium)] rounded-full" />
-                        <div className="h-5 w-16 bg-[var(--color-border-medium)] rounded-full" />
+        <div className="bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-border-light)] overflow-hidden animate-pulse">
+            {/* Email header skeleton */}
+            <div className="px-4 py-3 border-b border-[var(--color-border-light)]">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-[var(--color-border-medium)]" />
+                    <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                            <div className="h-4 w-32 bg-[var(--color-border-medium)] rounded" />
+                            <div className="h-3 w-16 bg-[var(--color-border-light)] rounded" />
+                        </div>
+                        <div className="h-3 w-48 bg-[var(--color-border-light)] rounded" />
+                    </div>
+                    <div className="flex gap-1">
+                        <div className="h-5 w-14 bg-[var(--color-border-light)] rounded" />
+                        <div className="h-5 w-14 bg-[var(--color-border-light)] rounded" />
                     </div>
                 </div>
             </div>
-            <div className="mt-4 space-y-2">
-                <div className="h-16 bg-[var(--color-bg-tertiary)] rounded-lg" />
-                <div className="h-16 bg-[var(--color-bg-tertiary)] rounded-lg" />
+
+            {/* Content skeleton */}
+            <div className="p-4 space-y-3">
+                <div className="rounded-xl border border-[var(--color-border-light)] p-4 space-y-3">
+                    <div className="h-5 w-3/4 bg-[var(--color-border-medium)] rounded" />
+                    <div className="h-4 w-full bg-[var(--color-border-light)] rounded" />
+                    <div className="h-4 w-2/3 bg-[var(--color-border-light)] rounded" />
+                    <div className="flex gap-2 pt-2">
+                        <div className="h-5 w-16 bg-[var(--color-border-light)] rounded-full" />
+                        <div className="h-5 w-20 bg-[var(--color-border-light)] rounded-full" />
+                    </div>
+                </div>
             </div>
         </div>
     );

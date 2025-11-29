@@ -31,24 +31,23 @@ class EventStatus(str, Enum):
     UNKNOWN = "unknown"
 
 
+class EventType(str, Enum):
+    """Type of event."""
+    WEBINAR = "webinar"
+    CONFERENCE = "conference"
+    WORKSHOP = "workshop"
+    MEETUP = "meetup"
+    TALK = "talk"
+    HACKATHON = "hackathon"
+    OTHER = "other"
+
+
 class ExtractedEvent(BaseModel):
     """
     Pydantic model for extracted event information.
     
     This model represents a single event extracted from an email.
     All fields except 'title' are optional to handle partial extraction.
-    
-    Attributes:
-        title: Event name (required)
-        description: Event description or summary
-        start_time: Event start date/time (ISO 8601 format)
-        end_time: Event end date/time (ISO 8601 format)
-        timezone: Timezone (e.g., "America/New_York", "UTC")
-        location: Physical location or "Online"
-        registration_link: URL to register or get more info
-        tags: List of relevant tags/categories
-        organizer: Event organizer name
-        cost: Cost information (e.g., "Free", "$50", "Members only")
     """
     
     title: str = Field(
@@ -58,10 +57,26 @@ class ExtractedEvent(BaseModel):
         max_length=200
     )
     
+    hook: Optional[str] = Field(
+        None,
+        description="A compelling 1-2 sentence summary that captures why someone should attend",
+        max_length=300
+    )
+    
     description: Optional[str] = Field(
         None,
-        description="Detailed event description or summary",
+        description="Detailed event description",
         max_length=2000
+    )
+    
+    event_type: Optional[EventType] = Field(
+        None,
+        description="Type of event (webinar, conference, workshop, meetup, talk, hackathon, other)"
+    )
+    
+    image_url: Optional[str] = Field(
+        None,
+        description="URL of event banner, poster, or thumbnail image if found in the email"
     )
     
     start_time: Optional[str] = Field(
@@ -102,6 +117,11 @@ class ExtractedEvent(BaseModel):
     cost: Optional[str] = Field(
         None,
         description="Cost information (e.g., 'Free', '$50', 'Members only')"
+    )
+    
+    is_free: Optional[bool] = Field(
+        None,
+        description="Whether the event is free to attend"
     )
 
     model_config = {
@@ -191,16 +211,34 @@ class ExtractedCourse(BaseModel):
     """Pydantic model for extracted course information."""
     
     title: str = Field(..., description="Course title")
+    
+    hook: Optional[str] = Field(
+        None, 
+        description="A compelling 1-2 sentence summary of what you'll learn and why it matters",
+        max_length=300
+    )
+    
     description: Optional[str] = Field(None, description="Detailed course description")
-    provider: Optional[str] = Field(None, description="Course provider (e.g., Coursera, Udemy)")
+    
+    image_url: Optional[str] = Field(
+        None,
+        description="URL of course thumbnail or banner image if found in the email"
+    )
+    
+    provider: Optional[str] = Field(None, description="Course provider (e.g., Coursera, Udemy, Company name)")
     instructor: Optional[str] = Field(None, description="Instructor name")
     level: Optional[CourseLevel] = Field(None, description="Course difficulty level")
     duration: Optional[str] = Field(None, description="Course duration (e.g., '6 weeks', '20 hours')")
     cost: Optional[str] = Field(None, description="Cost information (e.g., 'Free', '$49', 'Subscription')")
+    is_free: Optional[bool] = Field(None, description="Whether the course is free")
     enrollment_link: Optional[str] = Field(None, description="Course enrollment URL")
     tags: List[str] = Field(default_factory=list, description="Relevant tags/topics")
     start_date: Optional[str] = Field(None, description="Course start date (if fixed schedule)")
     certificate_offered: Optional[bool] = Field(None, description="Whether a certificate is offered")
+    what_you_learn: Optional[List[str]] = Field(
+        default_factory=list,
+        description="Key learning outcomes or skills (max 5 bullet points)"
+    )
 
 
 class CourseExtractionResult(BaseModel):
@@ -218,14 +256,32 @@ class ExtractedBlog(BaseModel):
     """Pydantic model for extracted blog/article information."""
     
     title: str = Field(..., description="Blog post title")
-    description: Optional[str] = Field(None, description="Article summary or excerpt")
+    
+    hook: Optional[str] = Field(
+        None, 
+        description="The compelling opening line or teaser that makes readers want to click - extract this from the email if present",
+        max_length=400
+    )
+    
+    description: Optional[str] = Field(None, description="Article summary or key takeaways")
+    
+    image_url: Optional[str] = Field(
+        None,
+        description="URL of article thumbnail, hero image, or author avatar if found in the email"
+    )
+    
     author: Optional[str] = Field(None, description="Author name")
+    author_title: Optional[str] = Field(None, description="Author's role or credentials (e.g., 'CTO at Stripe', 'AI Researcher')")
     published_date: Optional[str] = Field(None, description="Publication date (ISO 8601)")
     url: Optional[str] = Field(None, description="Article URL")
-    category: Optional[str] = Field(None, description="Content category (e.g., 'AI', 'Web Dev')")
-    reading_time: Optional[str] = Field(None, description="Estimated reading time")
+    category: Optional[str] = Field(None, description="Content category (e.g., 'AI', 'Web Dev', 'Career')")
+    reading_time: Optional[str] = Field(None, description="Estimated reading time (e.g., '5 min read')")
     tags: List[str] = Field(default_factory=list, description="Article tags/topics")
-    source: Optional[str] = Field(None, description="Publication source (blog name, newsletter)")
+    source: Optional[str] = Field(None, description="Publication source (blog name, newsletter name)")
+    key_points: Optional[List[str]] = Field(
+        default_factory=list,
+        description="Key takeaways or main points from the article (max 3-5 bullet points)"
+    )
 
 
 class BlogExtractionResult(BaseModel):

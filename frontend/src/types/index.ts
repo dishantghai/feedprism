@@ -9,6 +9,8 @@
 
 export type ItemType = 'event' | 'course' | 'blog';
 
+export type EventType = 'webinar' | 'conference' | 'workshop' | 'meetup' | 'talk' | 'hackathon' | 'other';
+
 export interface FeedItem {
     id: string;
     email_id: string;
@@ -18,17 +20,38 @@ export interface FeedItem {
     received_at: string;
     item_type: ItemType;
     title: string;
+    hook?: string;              // Compelling summary/teaser
     description?: string;
+    image_url?: string;         // Thumbnail/banner image
     tags: string[];
     url?: string;
+    is_free?: boolean;
 
-    // Type-specific fields
-    start_time?: string;    // events
-    location?: string;      // events
-    organizer?: string;     // events
-    provider?: string;      // courses
-    author?: string;        // blogs
-    source?: string;        // blogs
+    // Event-specific fields
+    start_time?: string;
+    end_time?: string;
+    timezone?: string;
+    location?: string;
+    organizer?: string;
+    event_type?: EventType;
+    cost?: string;
+
+    // Course-specific fields
+    provider?: string;
+    instructor?: string;
+    level?: string;
+    duration?: string;
+    certificate_offered?: boolean;
+    what_you_learn?: string[];
+
+    // Blog-specific fields
+    author?: string;
+    author_title?: string;
+    source?: string;
+    category?: string;
+    reading_time?: string;
+    published_date?: string;
+    key_points?: string[];
 
     // Metadata
     score?: number;

@@ -30,15 +30,40 @@ def _point_to_feed_item(point: dict, content_type: str) -> FeedItem:
         received_at=payload.get("source_received_at", ""),
         item_type=content_type,
         title=payload.get("title", "Untitled"),
+        hook=payload.get("hook"),
         description=payload.get("description"),
+        image_url=payload.get("image_url"),
         tags=payload.get("tags", []),
         url=payload.get("registration_link") or payload.get("enrollment_link") or payload.get("url"),
+        is_free=payload.get("is_free"),
+        
+        # Event fields
         start_time=payload.get("start_time"),
+        end_time=payload.get("end_time"),
+        timezone=payload.get("timezone"),
         location=payload.get("location"),
         organizer=payload.get("organizer"),
+        event_type=payload.get("event_type"),
+        cost=payload.get("cost"),
+        
+        # Course fields
         provider=payload.get("provider"),
+        instructor=payload.get("instructor"),
+        level=payload.get("level"),
+        duration=payload.get("duration"),
+        certificate_offered=payload.get("certificate_offered"),
+        what_you_learn=payload.get("what_you_learn", []),
+        
+        # Blog fields
         author=payload.get("author"),
+        author_title=payload.get("author_title"),
         source=payload.get("source"),
+        category=payload.get("category"),
+        reading_time=payload.get("reading_time"),
+        published_date=payload.get("published_date"),
+        key_points=payload.get("key_points", []),
+        
+        # Metadata
         score=point.get("score"),
         extracted_at=payload.get("extracted_at")
     )

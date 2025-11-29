@@ -95,17 +95,38 @@ class FeedItem(BaseModel):
     received_at: str
     item_type: Literal["event", "course", "blog"]
     title: str
+    hook: Optional[str] = None        # Compelling summary/teaser
     description: Optional[str] = None
+    image_url: Optional[str] = None   # Thumbnail/banner image
     tags: List[str] = Field(default_factory=list)
     url: Optional[str] = None
+    is_free: Optional[bool] = None
     
-    # Type-specific fields
-    start_time: Optional[str] = None  # events
-    location: Optional[str] = None    # events
-    organizer: Optional[str] = None   # events
-    provider: Optional[str] = None    # courses
-    author: Optional[str] = None      # blogs
-    source: Optional[str] = None      # blogs
+    # Event-specific fields
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    timezone: Optional[str] = None
+    location: Optional[str] = None
+    organizer: Optional[str] = None
+    event_type: Optional[str] = None  # webinar, conference, workshop, etc.
+    cost: Optional[str] = None
+    
+    # Course-specific fields
+    provider: Optional[str] = None
+    instructor: Optional[str] = None
+    level: Optional[str] = None
+    duration: Optional[str] = None
+    certificate_offered: Optional[bool] = None
+    what_you_learn: List[str] = Field(default_factory=list)
+    
+    # Blog-specific fields
+    author: Optional[str] = None
+    author_title: Optional[str] = None
+    source: Optional[str] = None
+    category: Optional[str] = None
+    reading_time: Optional[str] = None
+    published_date: Optional[str] = None
+    key_points: List[str] = Field(default_factory=list)
     
     # Metadata
     score: Optional[float] = None

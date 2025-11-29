@@ -101,7 +101,8 @@ def get_unprocessed_emails(
         # Fetch recent emails from Gmail
         # Convert hours to days (minimum 1 day for Gmail API)
         days_back = max(1, hours // 24 + 1)
-        raw_emails = gmail.fetch_content_rich_emails(days_back=days_back, max_results=50)
+        # Limit to 20 emails for faster response - user can extract more later
+        raw_emails = gmail.fetch_content_rich_emails(days_back=days_back, max_results=20)
         
         # Filter to only unprocessed emails within the time window
         from datetime import datetime, timedelta

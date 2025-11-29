@@ -273,26 +273,101 @@ function EmailGroupDetail({
     emailGroup: EmailGroup;
     onItemClick?: (item: FeedItem) => void;
 }) {
+    // Get counts by type
+    const typeCounts = emailGroup.items.reduce(
+        (acc, item) => {
+            acc[item.item_type] = (acc[item.item_type] || 0) + 1;
+            return acc;
+        },
+        {} as Record<string, number>
+    );
+
     return (
         <div className="space-y-6">
-            {/* Email subject */}
-            <h1 className="text-xl font-semibold text-[var(--color-text-primary)] leading-tight">
-                {emailGroup.email_subject}
-            </h1>
+            {/* Email Header Section */}
+            <div className="bg-gradient-to-br from-[var(--color-bg-tertiary)] to-[var(--color-bg-secondary)] rounded-xl p-5 border border-[var(--color-border-light)]">
+                <div className="flex items-start gap-4">
+                    {/* Sender Avatar */}
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--color-prism-start)] to-[var(--color-prism-end)] flex items-center justify-center text-lg text-white font-semibold flex-shrink-0">
+                        {getInitials(emailGroup.sender)}
+                    </div>
 
-            {/* Extracted items */}
-            <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
-                    <span>{emailGroup.items.length} items extracted</span>
+                    <div className="flex-1 min-w-0">
+                        {/* Sender info */}
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-base font-semibold text-[var(--color-text-primary)]">
+                                {emailGroup.sender}
+                            </span>
+                        </div>
+                        <p className="text-xs text-[var(--color-text-tertiary)] mb-3">
+                            {emailGroup.sender_email} • {new Date(emailGroup.received_at).toLocaleString()}
+                        </p>
+
+                        {/* Subject */}
+                        <h1 className="text-lg font-medium text-[var(--color-text-primary)] leading-snug">
+                            {emailGroup.email_subject}
+                        </h1>
+                    </div>
                 </div>
 
-                {emailGroup.items.map((item) => (
-                    <ExtractedItemCard
-                        key={item.id}
-                        item={item}
-                        onClick={() => onItemClick?.(item)}
-                    />
-                ))}
+                {/* Extraction Summary */}
+                <div className="mt-4 pt-4 border-t border-[var(--color-border-light)]">
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-[var(--color-text-tertiary)]">Extracted:</span>
+                        <div className="flex items-center gap-2">
+                            {typeCounts.event && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                    <Calendar className="w-3 h-3" />
+                                    {typeCounts.event} event{typeCounts.event > 1 ? 's' : ''}
+                                </span>
+                            )}
+                            {typeCounts.course && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                    <BookOpen className="w-3 h-3" />
+                                    {typeCounts.course} course{typeCounts.course > 1 ? 's' : ''}
+                                </span>
+                            )}
+                            {typeCounts.blog && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                                    <FileText className="w-3 h-3" />
+                                    {typeCounts.blog} article{typeCounts.blog > 1 ? 's' : ''}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Extracted Items Section */}
+            <div>
+                <h2 className="text-sm font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-4">
+                    Extracted Content
+                </h2>
+                <div className="space-y-4">
+                    {emailGroup.items.map((item) => (
+                        <ExtractedItemCard
+                            key={item.id}
+                            item={item}
+                            onClick={() => onItemClick?.(item)}
+                            showEmailAttribution={false}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {/* Original Email Preview Placeholder */}
+            <div className="pt-4 border-t border-[var(--color-border-light)]">
+                <details className="group">
+                    <summary className="flex items-center gap-2 cursor-pointer text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]">
+                        <Mail className="w-4 h-4" />
+                        <span>View original email</span>
+                        <span className="text-xs">(coming soon)</span>
+                    </summary>
+                    <div className="mt-4 p-4 bg-[var(--color-bg-tertiary)] rounded-lg text-sm text-[var(--color-text-tertiary)]">
+                        Original email content will be displayed here in a future update.
+                        This will show the full email body as it was received.
+                    </div>
+                </details>
             </div>
         </div>
     );

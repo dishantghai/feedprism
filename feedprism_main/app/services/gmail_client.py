@@ -118,19 +118,26 @@ class GmailClient:
             raise
     
     def get_messages_batch(self, message_ids: List[str]) -> List[Dict[str, Any]]:
-        """Fetch multiple messages efficiently."""
-        logger.info(f"Fetching {len(message_ids)} messages")
+        """Fetch multiple messages with progress logging."""
+        total = len(message_ids)
+        logger.info(f"Fetching {total} messages...")
         
         messages = []
-        for msg_id in message_ids:
+        for i, msg_id in enumerate(message_ids):
             try:
                 message = self.get_message(msg_id)
                 messages.append(message)
-            except HttpError:
-                logger.warning(f"Skipping message {msg_id}")
+                # Log progress every 10 messages
+                if (i + 1) % 10 == 0:
+                    logger.info(f"Fetched {i + 1}/{total} messages")
+            except HttpError as e:
+                logger.warning(f"Skipping message {msg_id}: {e}")
+                continue
+            except Exception as e:
+                logger.warning(f"Error fetching {msg_id}: {e}")
                 continue
         
-        logger.success(f"Fetched {len(messages)} messages")
+        logger.success(f"Fetched {len(messages)}/{total} messages")
         return messages
     
     def parse_message_headers(self, message: Dict[str, Any]) -> Dict[str, str]:
@@ -185,24 +192,24 @@ class GmailClient:
     def fetch_content_rich_emails(
         self,
         days_back: int = 30,
-        max_results: int = 200
+        max_results: int = 50  # Reduced default for faster response
     ) -> List[Dict[str, Any]]:
         """
         Fetch content-rich emails (newsletters, events, courses).
         
         Args:
             days_back: How many days back to search
-            max_results: Maximum emails to fetch
+            max_results: Maximum emails to fetch (keep low for speed)
         
         Returns:
             List of parsed email dicts
         """
-        logger.info(f"Fetching content-rich emails (last {days_back} days)")
+        logger.info(f"Fetching content-rich emails (last {days_back} days, max {max_results})")
         
-        # Build search query
+        # Build search query - more specific to reduce results
         query_parts = [
             f"newer_than:{days_back}d",
-            "(unsubscribe OR newsletter OR event OR webinar OR course)"
+            "category:promotions OR category:updates OR (subject:(newsletter OR webinar OR event OR course))"
         ]
         query = " ".join(query_parts)
         

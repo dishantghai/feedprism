@@ -146,64 +146,175 @@ class LLMExtractor:
     
     def _build_prompt(self, email_text: str, email_subject: str) -> str:
         """Build event extraction prompt."""
-        truncated = email_text[:3000]
-        if len(email_text) > 3000:
+        truncated = email_text[:4000]
+        if len(email_text) > 4000:
             truncated += "\n\n[... truncated ...]"
         
-        return f"""Extract all event information from this email.
+        return f"""Extract TIME-BOUND EVENTS from this email.
+
+=== WHAT IS AN EVENT? ===
+An EVENT is a scheduled gathering that happens at a SPECIFIC DATE AND TIME where people attend together.
+
+EXTRACT AS EVENTS:
+✓ Webinars (live online sessions with a specific time)
+✓ Conferences (multi-day industry gatherings)
+✓ Meetups (community gatherings, networking events)
+✓ Workshops (hands-on sessions at a specific time)
+✓ Talks/Presentations (speaker sessions)
+✓ Hackathons (time-bound coding competitions)
+✓ AMAs, Q&A sessions, office hours
+✓ Product launches, demo days
+
+DO NOT EXTRACT AS EVENTS:
+✗ Online courses (even if they have a start date - those go in courses)
+✗ Articles or blog posts (those go in blogs)
+✗ Self-paced tutorials
+✗ Podcast episodes
+✗ Pre-recorded videos
 
 Email Subject: {email_subject}
 
 Email Content:
 {truncated}
 
-Instructions:
-1. Find all events, webinars, conferences, meetups, or workshops
-2. Extract: title, description, start_time (ISO 8601), end_time, timezone, location, registration_link, tags, organizer, cost
-3. Use null for missing information
-4. Return confidence score (0.0-1.0)
-5. If no events found, return empty array with confidence 0.0
+=== EXTRACTION INSTRUCTIONS ===
+For each event found, extract:
+- title: Event name
+- hook: 1-2 sentence compelling reason to attend
+- description: What the event is about
+- event_type: webinar | conference | workshop | meetup | talk | hackathon | other
+- start_time: ISO 8601 format (REQUIRED for events - if no date, it's probably not an event)
+- end_time: ISO 8601 format if available
+- timezone: Event timezone
+- location: Physical address OR "Online"
+- registration_link: URL to register/RSVP
+- organizer: Host/organizer name
+- cost: Price or "Free"
+- is_free: true/false
+- image_url: Event banner/poster URL if found
+- tags: Relevant categories
+
+KEY: If there's no specific date/time, it's probably NOT an event.
+Return confidence 0.0 and empty array if no events found.
 """
     
     def _build_course_prompt(self, email_text: str, email_subject: str) -> str:
         """Build course extraction prompt."""
-        truncated = email_text[:3000]
-        if len(email_text) > 3000:
+        truncated = email_text[:4000]
+        if len(email_text) > 4000:
             truncated += "\n\n[... truncated ...]"
         
-        return f"""Extract all course and learning opportunity information from this email.
+        return f"""Extract STRUCTURED LEARNING COURSES from this email.
+
+=== WHAT IS A COURSE? ===
+A COURSE is a STRUCTURED EDUCATIONAL PROGRAM with a curriculum designed to teach specific skills over time.
+
+EXTRACT AS COURSES:
+✓ Online courses (Coursera, Udemy, edX, LinkedIn Learning, etc.)
+✓ Bootcamps (intensive training programs)
+✓ Certification programs
+✓ Multi-session training series
+✓ Cohort-based courses (with structured curriculum)
+✓ Self-paced video courses
+✓ Masterclasses
+
+DO NOT EXTRACT AS COURSES:
+✗ Single webinars or talks (those are events - one-time sessions)
+✗ Meetups (those are events - networking gatherings)
+✗ Blog posts or tutorials (those are blogs - articles to read)
+✗ Podcast episodes
+✗ Conference sessions
+
+=== KEY DIFFERENTIATOR ===
+- If it's a SINGLE SESSION at a specific time → EVENT (not course)
+- If it's STRUCTURED LEARNING with multiple lessons/modules → COURSE
+- If it's an ARTICLE to read → BLOG (not course)
 
 Email Subject: {email_subject}
 
 Email Content:
 {truncated}
 
-Instructions:
-1. Find all courses, classes, training programs, or learning opportunities
-2. Extract: title, description, provider, instructor, level, duration, cost, enrollment_link, tags, start_date, certificate_offered
-3. Use null for missing information
-4. For 'cost', indicate if free or provide price
-5. Return confidence score (0.0-1.0)
-6. If no courses found, return empty array with confidence 0.0
+=== EXTRACTION INSTRUCTIONS ===
+For each course found, extract:
+- title: Course name
+- hook: 1-2 sentence pitch about what you'll learn
+- description: What the course covers
+- provider: Platform (Coursera, Udemy, etc.) or company offering it
+- instructor: Teacher name if mentioned
+- level: beginner | intermediate | advanced | all_levels
+- duration: Course length (e.g., "6 weeks", "20 hours")
+- cost: Price or "Free"
+- is_free: true/false
+- enrollment_link: URL to enroll
+- start_date: If cohort-based, when it starts
+- certificate_offered: true/false
+- what_you_learn: 3-5 key skills/outcomes
+- image_url: Course thumbnail if found
+- tags: Topics covered
+
+Return confidence 0.0 and empty array if no courses found.
 """
     
     def _build_blog_prompt(self, email_text: str, email_subject: str) -> str:
         """Build blog extraction prompt."""
-        truncated = email_text[:3000]
-        if len(email_text) > 3000:
+        truncated = email_text[:4000]
+        if len(email_text) > 4000:
             truncated += "\n\n[... truncated ...]"
         
-        return f"""Extract all blog posts, articles, and newsletter content from this email.
+        return f"""Extract ARTICLES AND BLOG POSTS from this email.
+
+=== WHAT IS A BLOG/ARTICLE? ===
+A BLOG is written content (article, essay, tutorial, guide) that you READ. It's passive consumption, not active participation.
+
+EXTRACT AS BLOGS:
+✓ Blog posts and articles
+✓ Newsletter featured content/essays
+✓ Written tutorials and guides
+✓ Opinion pieces and essays
+✓ Research summaries
+✓ Industry news and analysis
+✓ Case studies
+✓ Podcast show notes (the written summary)
+
+DO NOT EXTRACT AS BLOGS:
+✗ Events, webinars, meetups (those are events - you attend them)
+✗ Online courses (those are courses - structured learning)
+✗ Product announcements without article content
+✗ Job postings
+✗ Pure promotional content without informational value
+
+=== KEY DIFFERENTIATOR ===
+- If you ATTEND it at a time → EVENT
+- If you ENROLL and learn over time → COURSE  
+- If you READ it → BLOG
 
 Email Subject: {email_subject}
 
 Email Content:
 {truncated}
 
-Instructions:
-1. Find all blog posts, articles, or featured content
-2. Extract: title, description, author, published_date, url, category, reading_time, tags, source
-3. Use null for missing information
-4. Return confidence score (0.0-1.0)
-5. If no blogs found, return empty array with confidence 0.0
+=== EXTRACTION INSTRUCTIONS ===
+For each article/blog found, extract:
+- title: Article headline
+- hook: The compelling teaser/opening that makes you want to read (CRITICAL - extract from email text)
+- description: Brief summary of article content
+- author: Writer's name
+- author_title: Their role if mentioned (e.g., "CTO at Stripe")
+- published_date: Publication date (ISO 8601)
+- url: Link to full article (REQUIRED - if no link, might not be a real article)
+- category: Topic category (AI, Career, Startup, Engineering, etc.)
+- reading_time: Estimated read time if mentioned
+- source: Publication/newsletter name
+- key_points: 3-5 main takeaways from the article
+- image_url: Article thumbnail/hero image if found
+- tags: Relevant topics
+
+Look for hooks in:
+- Opening sentences that tease content
+- "Why X matters...", "How to...", "The secret to..."
+- Statistics or surprising facts
+- Questions that pique curiosity
+
+Return confidence 0.0 and empty array if no articles found.
 """
