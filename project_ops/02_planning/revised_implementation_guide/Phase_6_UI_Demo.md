@@ -1,5 +1,12 @@
 # Phase 6: UI & Demo - Frontend, Metrics Dashboard, README
 
+> **⚠️ NOTE:** This document describes the **original planned** static HTML/CSS/JS UI.
+> 
+> **Actual implementation** uses **React + Vite + Tailwind** in `/frontend/`.
+> See `project_ops/05_implementation/implementation_plan.md` for the current frontend architecture.
+> 
+> This document is retained for reference on metrics dashboard and README requirements.
+
 **Goal:** Build polished frontend UI, metrics dashboard, and comprehensive documentation for demo presentation.
 
 **Estimated Time:** 8-10 hours
@@ -19,7 +26,9 @@ Phase 6 creates the presentation layer:
 
 ## Module 6.1: Frontend UI (4 hours)
 
-**Files:** `app/static/index.html`, `app/static/styles.css`, `app/static/app.js`
+> **⚠️ OUTDATED:** Actual frontend is React-based. See `/frontend/` directory.
+
+**Original Plan (not implemented):** `app/static/index.html`, `app/static/styles.css`, `app/static/app.js`
 
 ### UI Components
 

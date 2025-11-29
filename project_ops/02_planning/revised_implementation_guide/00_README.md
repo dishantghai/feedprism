@@ -230,43 +230,28 @@ open project_ops/02_planning/revised_implementation_guide/Phase_0_Foundation.md
 
 ## 📊 Success Metrics
 
+> **Note:** For current project status, see `project_ops/PROJECT_STATUS.md`
+
 ### Minimum for Completion:
-- [ ] Can fetch emails from Gmail
-- [ ] Can extract events, courses, blogs
-- [ ] Can search with hybrid search
-- [ ] Has basic deduplication
-- [ ] Precision@10 ≥ 0.75
-- [ ] Has working demo UI
-- [ ] Has README with setup instructions
+- Can fetch emails from Gmail
+- Can extract events, courses, blogs
+- Can search with hybrid search
+- Has basic deduplication
+- Precision@10 ≥ 0.75
+- Has working demo UI
+- Has README with setup instructions
 
 ### Target for Top 3:
-- [ ] All of above ✅
-- [ ] 3-collection architecture
-- [ ] Named vectors implemented
-- [ ] Grouping API working
-- [ ] Discovery API for recommendations
-- [ ] Analytics dashboard functional
-- [ ] HNSW benchmarking documented
-- [ ] Ablation study showing feature impact
-- [ ] Precision@10 ≥ 0.87
-- [ ] Comprehensive technical README
-
----
-
-## 🗓️ Suggested Schedule
-
-**Aggressive (6 days, 10-12 hrs/day):**
-- Day 0 (Nov 25): Phase 0 - Foundation ✅
-- Day 1 (Nov 26): Phase 1 - Core Pipeline 🔨
-- Day 2 (Nov 27): Phase 2 - Multi-Content + Phase 3 - Hybrid Search 📦
-- Day 3 (Nov 28): Phase 4 - Qdrant Enhancements 🎯
-- Day 4 (Nov 29): Phase 5 - Advanced Features 🚀
-- Day 5-6 (Nov 29-30): Phase 6-7 - UI, Demo, Submit ✨
-
-**Moderate (7-8 days, 7-9 hrs/day):**
-- Add buffer days between phases
-- More thorough testing
-- Extra polish time
+- All of above
+- 3-collection architecture
+- Named vectors implemented
+- Grouping API working
+- Discovery API for recommendations
+- Analytics dashboard functional
+- HNSW benchmarking documented
+- Ablation study showing feature impact
+- Precision@10 ≥ 0.87
+- Comprehensive technical README
 
 ---
 

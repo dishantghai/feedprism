@@ -8,6 +8,16 @@
 
 ---
 
+## Related Documentation
+
+| Document | Scope |
+|----------|-------|
+| `Phase_5_Advanced_Features.md` | Original Phase 5 (Discovery API, Scroll API) |
+| `05_implementation/implementation_plan.md` | Frontend UI phases |
+| `PROJECT_STATUS.md` | **Single source of truth for progress** |
+
+---
+
 ## Overview
 
 This enhancement phase focused on two key areas:

@@ -2,7 +2,18 @@
 
 **Document Version:** 1.0  
 **Created:** Nov 28, 2025  
-**Status:** In Progress
+**Scope:** Frontend UI Implementation
+
+---
+
+## Related Documentation
+
+| Document | Scope |
+|----------|-------|
+| **This document** | Frontend UI phases (React + Vite + Tailwind) |
+| `02_planning/revised_implementation_guide/Phase_0-7_*.md` | Backend/Qdrant implementation |
+| `02_planning/revised_implementation_guide/Phase_5_Enhancements.md` | Feed card UX enhancements |
+| `PROJECT_STATUS.md` | **Single source of truth for progress** |
 
 ---
 
@@ -477,16 +488,7 @@ open http://localhost:8000/docs
 
 ## Current Progress
 
-| Phase | Status | Notes |
-|-------|--------|-------|
-| Phase 0: Backend API | ✅ Complete | Added feed, emails, search, metrics routers |
-| Phase 1: Frontend Setup | ✅ Complete | Vite + React + Tailwind + design tokens |
-| Phase 2: Layout & Sidebar | ✅ Complete | Arc-style sidebar with magenta+orange brand |
-| Phase 3: Prism Overview | ✅ Complete | Demo mode with live extraction pipeline |
-| Phase 4: Command & Filters | 🔲 Not Started | |
-| Phase 5: Feed Cards | 🔲 Not Started | |
-| Phase 6: Metrics Panel | 🔲 Not Started | |
-| Phase 7: Polish | 🔲 Not Started | |
+> **Note:** For current project status, see `project_ops/PROJECT_STATUS.md`
 
 ---
 
