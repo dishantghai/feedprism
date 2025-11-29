@@ -13,6 +13,7 @@ interface LayoutProps {
     children: ReactNode;
     activeView: ViewType;
     onViewChange: (view: ViewType) => void;
+    onOpenCommandPalette?: () => void;
     title?: string;
     subtitle?: string;
     counts?: {
@@ -27,6 +28,7 @@ export function Layout({
     children,
     activeView,
     onViewChange,
+    onOpenCommandPalette,
     title,
     subtitle,
     counts,
@@ -36,6 +38,7 @@ export function Layout({
             <Sidebar
                 activeView={activeView}
                 onViewChange={onViewChange}
+                onOpenCommandPalette={onOpenCommandPalette}
                 counts={counts}
             />
             <MainContent title={title} subtitle={subtitle}>

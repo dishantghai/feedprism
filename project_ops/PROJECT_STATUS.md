@@ -26,7 +26,7 @@
 | Phase 1: Frontend Setup | ✅ Complete | Vite + React + Tailwind + design tokens |
 | Phase 2: Layout & Sidebar | ✅ Complete | Arc-style sidebar with magenta+orange brand |
 | Phase 3: Prism Overview | ✅ Complete | Demo mode with live extraction pipeline (SSE) |
-| Phase 4: Command & Filters | 🔲 Not Started | Search bar, ⌘K palette, filter chips |
+| Phase 4: Command & Filters | ✅ Complete | ⌘K command palette, filter bar, keyboard nav |
 | Phase 5: Feed Cards | ✅ Complete | FeedCard, ExtractedItemCard with rich data |
 | Phase 6: Metrics Panel | 🔲 Not Started | Dashboard view with metrics |
 | Phase 7: Polish | 🔲 Not Started | Animations, loading states, final touches |
@@ -42,14 +42,14 @@
 
 ## Next Priority
 
-**Frontend Phase 4: Command Bar & Filters**
+**Frontend Phase 6: Metrics Panel** or **Phase 7: Polish**
 
-Components to implement:
-- `CommandBar.tsx` - Search input trigger in sidebar
-- `CommandPalette.tsx` - Modal with search results (⌘K)
-- `FilterBar.tsx` - Filter chips (type, status, sender, date, sort)
+Remaining work:
+- Metrics dashboard with charts and stats visualization
+- Loading state animations
+- Final UI polish and transitions
 
-See: `project_ops/05_implementation/implementation_plan.md` → Phase 4 section
+See: `project_ops/05_implementation/implementation_plan.md` → Phase 6-7 sections
 
 ---
 
@@ -78,6 +78,8 @@ See: `project_ops/05_implementation/implementation_plan.md` → Phase 4 section
 - `frontend/src/components/layout/Sidebar.tsx` - Navigation
 - `frontend/src/components/prism/` - Extraction demo components
 - `frontend/src/components/feed/` - Feed cards (FeedCard, ExtractedItemCard, FeedList)
+- `frontend/src/components/search/` - CommandPalette, FilterBar
+- `frontend/src/hooks/` - useKeyboard, useCommandK
 - `frontend/src/services/api.ts` - Backend API client
 
 ---
@@ -85,6 +87,10 @@ See: `project_ops/05_implementation/implementation_plan.md` → Phase 4 section
 ## Recent Changes
 
 ### Nov 29, 2025
+- ✅ Phase 4: Command Bar & Filters implementation
+  - CommandPalette with ⌘K shortcut, search, keyboard navigation
+  - FilterBar with type/status/sort filters
+  - useKeyboard hook for global shortcuts
 - ✅ Phase 5 Enhancements: Feed card redesign with richer data
 - ✅ LLM prompt improvements for better classification
 - ✅ Gmail client robustness (retries, concurrency guard)

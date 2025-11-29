@@ -8,11 +8,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Inbox, RefreshCw, AlertCircle } from 'lucide-react';
 import { FeedCard, type EmailGroup } from './FeedCard';
 import { DetailModal } from './DetailModal';
+import { FilterBar, type FilterState, type StatusFilter, type SortOption } from '../search';
 import { api } from '../../services/api';
 import type { FeedItem, ItemType } from '../../types';
 
 interface FeedListProps {
-    /** Filter by item type (optional) */
+    /** Filter by item type (optional) - locks to single type, hides type filter */
     filterType?: ItemType;
     /** Maximum items to show */
     limit?: number;
@@ -20,6 +21,8 @@ interface FeedListProps {
     title?: string;
     /** Show refresh button */
     showRefresh?: boolean;
+    /** Show filter bar */
+    showFilters?: boolean;
 }
 
 export function FeedList({
@@ -27,11 +30,19 @@ export function FeedList({
     limit = 50,
     title,
     showRefresh = true,
+    showFilters = false,
 }: FeedListProps) {
     const [items, setItems] = useState<FeedItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+
+    // Filter state
+    const [filters, setFilters] = useState<FilterState>({
+        types: filterType ? [filterType] : [],
+        status: 'any' as StatusFilter,
+        sort: 'recent' as SortOption,
+    });
 
     // Modal state
     const [selectedItem, setSelectedItem] = useState<FeedItem | null>(null);
@@ -68,11 +79,39 @@ export function FeedList({
         fetchFeed();
     }, [fetchFeed]);
 
+    // Apply filters to items
+    const filteredItems = useMemo(() => {
+        let result = [...items];
+
+        // Type filter (if not locked by filterType prop)
+        if (!filterType && filters.types.length > 0) {
+            result = result.filter(item => filters.types.includes(item.item_type));
+        }
+
+        // Status filter (upcoming/past for events)
+        if (filters.status !== 'any') {
+            const now = new Date();
+            result = result.filter(item => {
+                if (item.item_type !== 'event' || !item.start_time) return true;
+                const eventDate = new Date(item.start_time);
+                return filters.status === 'upcoming' ? eventDate >= now : eventDate < now;
+            });
+        }
+
+        // Sort
+        if (filters.sort === 'recent') {
+            result.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
+        }
+        // 'relevance' sort would require score from search API
+
+        return result;
+    }, [items, filters, filterType]);
+
     // Group items by email
     const emailGroups = useMemo(() => {
         const groups = new Map<string, EmailGroup>();
 
-        for (const item of items) {
+        for (const item of filteredItems) {
             const existing = groups.get(item.email_id);
             if (existing) {
                 existing.items.push(item);
@@ -92,7 +131,7 @@ export function FeedList({
         return Array.from(groups.values()).sort((a, b) => {
             return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
         });
-    }, [items]);
+    }, [filteredItems]);
 
     // Handle item click - show detail modal
     const handleItemClick = (item: FeedItem) => {
@@ -195,6 +234,15 @@ export function FeedList({
                 </div>
             )}
 
+            {/* Filter Bar */}
+            {showFilters && (
+                <FilterBar
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    showTypeFilter={!filterType}
+                />
+            )}
+
             {/* Feed cards */}
             <div className="space-y-4">
                 {emailGroups.map((group) => (
@@ -209,7 +257,8 @@ export function FeedList({
 
             {/* Summary */}
             <div className="text-center py-6 text-xs text-[var(--color-text-tertiary)]">
-                Showing {items.length} items from {emailGroups.length} emails
+                Showing {filteredItems.length} items from {emailGroups.length} emails
+                {filteredItems.length !== items.length && ` (${items.length} total)`}
             </div>
 
             {/* Detail Modal */}

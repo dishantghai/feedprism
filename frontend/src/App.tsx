@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Layout } from './components/layout';
 import { PrismOverview } from './components/prism';
 import { FeedList } from './components/feed';
+import { CommandPalette } from './components/search';
+import { useCommandK } from './hooks';
 import { api } from './services/api';
-import type { MetricsResponse, ViewType } from './types';
+import type { MetricsResponse, ViewType, FeedItem } from './types';
 
 // View title and subtitle mapping
 const VIEW_CONFIG: Record<ViewType, { title: string; subtitle: string }> = {
@@ -23,6 +25,24 @@ function App() {
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  // Global ⌘K shortcut
+  const openCommandPalette = useCallback(() => setIsCommandPaletteOpen(true), []);
+  const closeCommandPalette = useCallback(() => setIsCommandPaletteOpen(false), []);
+  useCommandK(openCommandPalette);
+
+  // Handle item selection from command palette
+  const handleSelectItem = useCallback((item: FeedItem) => {
+    // Navigate to the appropriate view based on item type
+    const viewMap: Record<string, ViewType> = {
+      event: 'events',
+      course: 'courses',
+      blog: 'blogs',
+    };
+    setActiveView(viewMap[item.item_type] || 'home');
+    // TODO: Could also scroll to or highlight the specific item
+  }, []);
 
   useEffect(() => {
     async function fetchMetrics() {
@@ -51,27 +71,38 @@ function App() {
   const viewConfig = VIEW_CONFIG[activeView];
 
   return (
-    <Layout
-      activeView={activeView}
-      onViewChange={setActiveView}
-      title={viewConfig.title}
-      subtitle={viewConfig.subtitle}
-      counts={counts}
-    >
-      {/* Content based on active view */}
-      {activeView === 'home' && (
-        <HomeView loading={loading} error={error} />
-      )}
-      {activeView === 'events' && <FeedList filterType="event" title="Events" />}
-      {activeView === 'courses' && <FeedList filterType="course" title="Courses" />}
-      {activeView === 'blogs' && <FeedList filterType="blog" title="Blogs" />}
-      {activeView === 'actions' && <PlaceholderView type="actions" />}
-      {activeView === 'metrics' && (
-        <MetricsView metrics={metrics} loading={loading} error={error} />
-      )}
-      {activeView === 'inbox' && <PlaceholderView type="inbox" />}
-      {activeView === 'settings' && <PlaceholderView type="settings" />}
-    </Layout>
+    <>
+      <Layout
+        activeView={activeView}
+        onViewChange={setActiveView}
+        onOpenCommandPalette={openCommandPalette}
+        title={viewConfig.title}
+        subtitle={viewConfig.subtitle}
+        counts={counts}
+      >
+        {/* Content based on active view */}
+        {activeView === 'home' && (
+          <HomeView loading={loading} error={error} />
+        )}
+        {activeView === 'events' && <FeedList filterType="event" title="Events" />}
+        {activeView === 'courses' && <FeedList filterType="course" title="Courses" />}
+        {activeView === 'blogs' && <FeedList filterType="blog" title="Blogs" />}
+        {activeView === 'actions' && <PlaceholderView type="actions" />}
+        {activeView === 'metrics' && (
+          <MetricsView metrics={metrics} loading={loading} error={error} />
+        )}
+        {activeView === 'inbox' && <PlaceholderView type="inbox" />}
+        {activeView === 'settings' && <PlaceholderView type="settings" />}
+      </Layout>
+
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={closeCommandPalette}
+        onNavigate={setActiveView}
+        onSelectItem={handleSelectItem}
+      />
+    </>
   );
 }
 
@@ -102,7 +133,7 @@ function HomeView({ error }: HomeViewProps) {
       <PrismOverview />
 
       {/* Intelligent Feed */}
-      <FeedList title="Recent Extractions" />
+      <FeedList title="Recent Extractions" showFilters />
     </div>
   );
 }

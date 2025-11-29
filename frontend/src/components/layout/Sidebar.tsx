@@ -31,6 +31,7 @@ import type { ViewType } from '../../types';
 interface SidebarProps {
     activeView: ViewType;
     onViewChange: (view: ViewType) => void;
+    onOpenCommandPalette?: () => void;
     counts?: {
         events: number;
         courses: number;
@@ -99,7 +100,7 @@ function Section({ title, icon, children, defaultOpen = true }: SectionProps) {
     );
 }
 
-export function Sidebar({ activeView, onViewChange, counts }: SidebarProps) {
+export function Sidebar({ activeView, onViewChange, onOpenCommandPalette, counts }: SidebarProps) {
     return (
         <aside className="w-[var(--sidebar-width)] h-screen flex flex-col border-r border-[var(--color-sidebar-hover)] bg-[linear-gradient(to_right,#0b0d1a_0%,#111326_40%,#1b1f30_80%,#222636_100%)]">
             {/* Logo / Prism Mark */}
@@ -117,10 +118,7 @@ export function Sidebar({ activeView, onViewChange, counts }: SidebarProps) {
             <div className="px-3 mb-4">
                 <button
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-[var(--color-sidebar-hover)] text-[var(--color-sidebar-text-muted)] text-sm hover:bg-[var(--color-sidebar-active)] hover:text-[var(--color-sidebar-text)] transition-colors"
-                    onClick={() => {
-                        // TODO: Open command palette
-                        console.log('Open command palette');
-                    }}
+                    onClick={onOpenCommandPalette}
                 >
                     <Search className="w-4 h-4" />
                     <span className="flex-1 text-left">Search...</span>
