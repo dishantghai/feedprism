@@ -380,7 +380,7 @@ function CourseCard({ item, onClick, compact, showEmailAttribution }: {
 }
 
 // =============================================================================
-// Blog Card - Article preview with thumbnail and excerpt
+// Blog Card - Article preview with prominent image and rich excerpt
 // =============================================================================
 
 function BlogCard({ item, onClick, compact, showEmailAttribution }: {
@@ -406,26 +406,34 @@ function BlogCard({ item, onClick, compact, showEmailAttribution }: {
         return (
             <div
                 onClick={onClick}
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer group"
+                className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer group"
             >
-                {/* Thumbnail or icon */}
+                {/* Larger thumbnail for compact view */}
                 {item.image_url ? (
                     <img
                         src={item.image_url}
                         alt=""
-                        className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                        className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                 ) : (
-                    <div className="w-10 h-10 rounded-lg bg-[var(--color-bg-tertiary)] flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-5 h-5 text-[var(--color-text-tertiary)]" />
+                    <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-6 h-6 text-purple-500" />
                     </div>
                 )}
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">{item.title}</p>
-                    <p className="text-xs text-[var(--color-text-tertiary)]">{item.source || item.author || 'Article'}</p>
+                    <p className="text-sm font-medium text-[var(--color-text-primary)] line-clamp-2 leading-snug">{item.title}</p>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-[var(--color-text-tertiary)]">
+                        <span>{item.source || item.author || 'Article'}</span>
+                        {item.reading_time && (
+                            <>
+                                <span>•</span>
+                                <span>{item.reading_time}</span>
+                            </>
+                        )}
+                    </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-[var(--color-text-tertiary)] opacity-0 group-hover:opacity-100" />
+                <ArrowRight className="w-4 h-4 text-[var(--color-text-tertiary)] opacity-0 group-hover:opacity-100 flex-shrink-0" />
             </div>
         );
     }
@@ -433,14 +441,34 @@ function BlogCard({ item, onClick, compact, showEmailAttribution }: {
     return (
         <div
             onClick={onClick}
-            className={`rounded-xl border ${cardColor} hover:shadow-md transition-all cursor-pointer group overflow-hidden`}
+            className={`rounded-xl border ${cardColor} hover:shadow-lg transition-all cursor-pointer group overflow-hidden`}
         >
-            <div className="p-4">
+            {/* Featured Image - prominent display */}
+            {item.image_url && (
+                <div className="relative w-full h-48 overflow-hidden bg-gray-100">
+                    <img
+                        src={item.image_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }}
+                    />
+                    {/* Gradient overlay for better text readability if needed */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                    {/* Category badge on image */}
+                    {item.category && (
+                        <span className="absolute top-3 left-3 text-xs font-medium px-2.5 py-1 rounded-full bg-white/90 text-[var(--color-text-secondary)] shadow-sm">
+                            {item.category}
+                        </span>
+                    )}
+                </div>
+            )}
+
+            <div className="p-5">
                 {/* Header: Source + Author + Reading time */}
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
                         {item.source && (
-                            <span className="font-medium text-[var(--color-text-secondary)]">
+                            <span className="font-semibold text-[var(--color-text-secondary)]">
                                 {item.source}
                             </span>
                         )}
@@ -464,43 +492,56 @@ function BlogCard({ item, onClick, compact, showEmailAttribution }: {
                     )}
                 </div>
 
-                {/* Title */}
-                <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-2 line-clamp-2 group-hover:text-[var(--color-accent-blue)] transition-colors">
+                {/* Title - larger and more prominent */}
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-3 line-clamp-2 group-hover:text-[var(--color-accent-blue)] transition-colors leading-tight">
                     {item.title}
                 </h3>
 
-                {/* Hook/Description - the compelling preview */}
+                {/* Hook/Description - more lines for better engagement */}
                 {displayText && (
-                    <p className="text-sm text-[var(--color-text-secondary)] line-clamp-3 mb-3 leading-relaxed">
+                    <p className="text-sm text-[var(--color-text-secondary)] line-clamp-4 mb-4 leading-relaxed">
                         {displayText}
                     </p>
                 )}
 
-                {/* Key points if available */}
+                {/* Key points if available - show more */}
                 {item.key_points && item.key_points.length > 0 && (
-                    <ul className="text-xs text-[var(--color-text-secondary)] mb-3 space-y-1">
-                        {item.key_points.slice(0, 2).map((point, index) => (
-                            <li key={index} className="flex items-start gap-1.5">
-                                <span className="text-[var(--color-accent-blue)] mt-0.5">→</span>
+                    <ul className="text-sm text-[var(--color-text-secondary)] mb-4 space-y-1.5">
+                        {item.key_points.slice(0, 3).map((point, index) => (
+                            <li key={index} className="flex items-start gap-2">
+                                <span className="text-[var(--color-accent-blue)] mt-0.5 font-bold">→</span>
                                 <span className="line-clamp-1">{point}</span>
                             </li>
                         ))}
                     </ul>
                 )}
 
-                {/* Category + Tags */}
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                    {item.category && (
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]">
-                            {item.category}
-                        </span>
-                    )}
-                    {item.tags && item.tags.slice(0, 2).map((tag, index) => (
-                        <span key={index} className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-tertiary)]">
-                            {tag}
-                        </span>
-                    ))}
-                </div>
+                {/* Tags - only show if no image (category shown on image) */}
+                {!item.image_url && (
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                        {item.category && (
+                            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]">
+                                {item.category}
+                            </span>
+                        )}
+                        {item.tags && item.tags.slice(0, 3).map((tag, index) => (
+                            <span key={index} className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-tertiary)]">
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
+                {/* Tags when image exists - show below content */}
+                {item.image_url && item.tags && item.tags.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                        {item.tags.slice(0, 3).map((tag, index) => (
+                            <span key={index} className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-tertiary)]">
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
 
                 {/* Footer */}
                 <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border-light)]">
@@ -512,7 +553,7 @@ function BlogCard({ item, onClick, compact, showEmailAttribution }: {
                             </span>
                         )}
                         {showEmailAttribution && (
-                            <span className="truncate max-w-[100px]">
+                            <span className="truncate max-w-[120px]">
                                 via {item.sender}
                             </span>
                         )}
@@ -523,9 +564,9 @@ function BlogCard({ item, onClick, compact, showEmailAttribution }: {
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-accent-blue)] hover:underline"
+                            className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-accent-blue)] hover:underline"
                         >
-                            Read article <ExternalLink className="w-3 h-3" />
+                            Read article <ExternalLink className="w-3.5 h-3.5" />
                         </a>
                     )}
                 </div>

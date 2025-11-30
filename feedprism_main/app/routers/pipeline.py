@@ -41,6 +41,21 @@ _fetch_in_progress = False
 _fetch_started_at: float = 0  # Timestamp when fetch started
 _FETCH_TIMEOUT_SECONDS = 120  # Auto-reset after 2 minutes
 
+# Global extraction state tracking (for SSE reconnection)
+_extraction_in_progress = False
+_extraction_started_at: float = 0
+_extraction_progress: Dict[str, Any] = {
+    "current": 0,
+    "total": 0,
+    "events": 0,
+    "courses": 0,
+    "blogs": 0,
+    "message": "",
+    "emails_processed": 0,
+    "errors": 0
+}
+_EXTRACTION_TIMEOUT_SECONDS = 600  # Auto-reset after 10 minutes
+
 
 def get_gmail() -> GmailClient:
     global _gmail_client
@@ -99,6 +114,37 @@ def reset_fetch_lock():
     _fetch_started_at = 0
     logger.info(f"Fetch lock manually reset (was_locked={was_locked})")
     return {"status": "ok", "was_locked": was_locked}
+
+
+@router.get("/extraction-status")
+def get_extraction_status():
+    """
+    Get current extraction pipeline status.
+    
+    Used by frontend to sync state on page load or after SSE disconnection.
+    Returns whether extraction is in progress and current progress if so.
+    """
+    global _extraction_in_progress, _extraction_started_at, _extraction_progress
+    
+    # Auto-reset stale extraction state (e.g., after server crash)
+    if _extraction_in_progress and _extraction_started_at > 0:
+        elapsed = time.time() - _extraction_started_at
+        if elapsed > _EXTRACTION_TIMEOUT_SECONDS:
+            logger.warning(f"Resetting stale extraction state (was stuck for {elapsed:.0f}s)")
+            _extraction_in_progress = False
+    
+    if _extraction_in_progress:
+        return {
+            "is_extracting": True,
+            "progress": _extraction_progress,
+            "started_at": datetime.fromtimestamp(_extraction_started_at).isoformat() if _extraction_started_at else None
+        }
+    
+    return {
+        "is_extracting": False,
+        "progress": None,
+        "started_at": None
+    }
 
 
 @router.get("/unprocessed-emails")
@@ -213,6 +259,8 @@ async def _extraction_stream(email_ids: List[str]) -> AsyncGenerator[str, None]:
     - complete: Pipeline complete
     - error: Error occurred
     """
+    global _extraction_in_progress, _extraction_started_at, _extraction_progress
+    
     gmail = get_gmail()
     qdrant = get_qdrant()
     parser = get_parser()
@@ -228,253 +276,309 @@ async def _extraction_stream(email_ids: List[str]) -> AsyncGenerator[str, None]:
         "errors": []
     }
     
+    # Set global extraction state
+    _extraction_in_progress = True
+    _extraction_started_at = time.time()
+    _extraction_progress.update({
+        "current": 0,
+        "total": total,
+        "events": 0,
+        "courses": 0,
+        "blogs": 0,
+        "message": f"Starting extraction for {total} emails",
+        "emails_processed": 0,
+        "errors": 0
+    })
+    
     def sse_event(event_type: str, data: dict) -> str:
         """Format SSE event."""
         return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
     
-    # Start event
-    yield sse_event("start", {
-        "total_emails": total,
-        "message": f"Starting extraction for {total} emails"
-    })
+    def update_progress(current: int = None, message: str = None, events: int = None, courses: int = None, blogs: int = None):
+        """Update global progress state."""
+        if current is not None:
+            _extraction_progress["current"] = current
+        if message is not None:
+            _extraction_progress["message"] = message
+        if events is not None:
+            _extraction_progress["events"] = events
+        if courses is not None:
+            _extraction_progress["courses"] = courses
+        if blogs is not None:
+            _extraction_progress["blogs"] = blogs
+        _extraction_progress["emails_processed"] = results["emails_processed"]
+        _extraction_progress["errors"] = len(results["errors"])
     
-    for idx, email_id in enumerate(email_ids, 1):
-        try:
-            # Fetch email
-            yield sse_event("fetch", {
-                "current": idx,
-                "total": total,
-                "email_id": email_id,
-                "message": f"Fetching email {idx}/{total}"
-            })
-            
-            email = gmail.get_message(email_id)
-            headers = gmail.parse_message_headers(email)
-            body = gmail.extract_body(email)
-            
-            subject = headers.get("subject", "No Subject")
-            sender = headers.get("from", "Unknown")
-            date = headers.get("date", "")
-            
-            # Parse email
-            yield sse_event("parse", {
-                "current": idx,
-                "total": total,
-                "subject": subject[:50],
-                "message": f"Parsing: {subject[:40]}..."
-            })
-            
-            # Get text content
-            text_content = body.get("text") or ""
-            if not text_content and body.get("html"):
-                parsed = parser.parse_html_email(body["html"])
-                text_content = parsed.get("text", "")
-            
-            if not text_content:
-                yield sse_event("skip", {
+    try:
+        # Start event
+        yield sse_event("start", {
+            "total_emails": total,
+            "message": f"Starting extraction for {total} emails"
+        })
+        
+        for idx, email_id in enumerate(email_ids, 1):
+            try:
+                # Update global progress
+                update_progress(current=idx, message=f"Fetching email {idx}/{total}")
+                
+                # Fetch email
+                yield sse_event("fetch", {
                     "current": idx,
                     "total": total,
-                    "reason": "No text content",
-                    "message": f"Skipping email {idx}: no content"
+                    "email_id": email_id,
+                    "message": f"Fetching email {idx}/{total}"
                 })
-                continue
-            
-            # Extract content
-            yield sse_event("extract", {
-                "current": idx,
-                "total": total,
-                "subject": subject[:50],
-                "message": f"Extracting content from: {subject[:40]}..."
-            })
-            
-            extracted = await orchestrator.extract_all(text_content, subject)
-            
-            events = extracted.get("events", [])
-            courses = extracted.get("courses", [])
-            blogs = extracted.get("blogs", [])
-            
-            extracted_count = len(events) + len(courses) + len(blogs)
-            
-            if extracted_count == 0:
-                yield sse_event("skip", {
+                
+                email = gmail.get_message(email_id)
+                headers = gmail.parse_message_headers(email)
+                body = gmail.extract_body(email)
+                
+                subject = headers.get("subject", "No Subject")
+                sender = headers.get("from", "Unknown")
+                date = headers.get("date", "")
+                
+                # Parse email
+                update_progress(message=f"Parsing: {subject[:40]}...")
+                yield sse_event("parse", {
                     "current": idx,
                     "total": total,
-                    "reason": "No content extracted",
-                    "message": f"No extractable content in email {idx}"
+                    "subject": subject[:50],
+                    "message": f"Parsing: {subject[:40]}..."
                 })
-                continue
-            
-            # Ingest to Qdrant
-            yield sse_event("ingest", {
-                "current": idx,
-                "total": total,
-                "events": len(events),
-                "courses": len(courses),
-                "blogs": len(blogs),
-                "message": f"Ingesting {extracted_count} items to Qdrant"
-            })
-            
-            sender_name, sender_email_addr = _parse_sender(sender)
-            
-            # Create points for events
-            if events:
-                event_points = []
-                for event in events:
-                    point_id = str(uuid.uuid4())
-                    vectors = embedder.create_named_vectors(
-                        title=event.title,
-                        description=event.description or event.title,
-                        full_text=f"{event.title} {event.description or ''}"
-                    )
-                    
-                    payload = {
-                        "title": event.title,
-                        "description": event.description,
-                        "start_time": event.start_time,
-                        "end_time": event.end_time,
-                        "location": event.location,
-                        "registration_link": event.registration_link,
-                        "tags": event.tags,
-                        "organizer": event.organizer,
-                        "cost": event.cost,
-                        "source_email_id": email_id,
-                        "source_subject": subject,
-                        "source_sender": sender_name,
-                        "source_sender_email": sender_email_addr,
-                        "source_received_at": date,
-                        "extracted_at": datetime.now().isoformat()
-                    }
-                    
-                    # Add sparse vector
-                    sparse_text = f"{event.title} {' '.join(event.tags)}"
-                    sparse_vec = create_sparse_vector(sparse_text)
-                    
-                    event_points.append(PointStruct(
-                        id=point_id,
-                        vector=vectors,
-                        payload=payload
-                    ))
                 
-                qdrant.upsert_by_type("events", event_points)
-                results["events"] += len(events)
-            
-            # Create points for courses
-            if courses:
-                course_points = []
-                for course in courses:
-                    point_id = str(uuid.uuid4())
-                    vectors = embedder.create_named_vectors(
-                        title=course.title,
-                        description=course.description or course.title,
-                        full_text=f"{course.title} {course.description or ''}"
-                    )
-                    
-                    payload = {
-                        "title": course.title,
-                        "description": course.description,
-                        "provider": course.provider,
-                        "instructor": course.instructor,
-                        "level": course.level.value if course.level else None,
-                        "duration": course.duration,
-                        "cost": course.cost,
-                        "enrollment_link": course.enrollment_link,
-                        "tags": course.tags,
-                        "start_date": course.start_date,
-                        "certificate_offered": course.certificate_offered,
-                        "source_email_id": email_id,
-                        "source_subject": subject,
-                        "source_sender": sender_name,
-                        "source_sender_email": sender_email_addr,
-                        "source_received_at": date,
-                        "extracted_at": datetime.now().isoformat()
-                    }
-                    
-                    course_points.append(PointStruct(
-                        id=point_id,
-                        vector=vectors,
-                        payload=payload
-                    ))
+                # Get text content and images from HTML
+                text_content = body.get("text") or ""
+                images = []
+                if body.get("html"):
+                    parsed = parser.parse_html_email(body["html"])
+                    if not text_content:
+                        text_content = parsed.get("text", "")
+                    images = parsed.get("images", [])
                 
-                qdrant.upsert_by_type("courses", course_points)
-                results["courses"] += len(courses)
-            
-            # Create points for blogs
-            if blogs:
-                blog_points = []
-                for blog in blogs:
-                    point_id = str(uuid.uuid4())
-                    vectors = embedder.create_named_vectors(
-                        title=blog.title,
-                        description=blog.description or blog.title,
-                        full_text=f"{blog.title} {blog.description or ''}"
-                    )
-                    
-                    payload = {
-                        "title": blog.title,
-                        "description": blog.description,
-                        "author": blog.author,
-                        "published_date": blog.published_date,
-                        "url": blog.url,
-                        "category": blog.category,
-                        "reading_time": blog.reading_time,
-                        "tags": blog.tags,
-                        "source": blog.source,
-                        "source_email_id": email_id,
-                        "source_subject": subject,
-                        "source_sender": sender_name,
-                        "source_sender_email": sender_email_addr,
-                        "source_received_at": date,
-                        "extracted_at": datetime.now().isoformat()
-                    }
-                    
-                    blog_points.append(PointStruct(
-                        id=point_id,
-                        vector=vectors,
-                        payload=payload
-                    ))
+                if not text_content:
+                    yield sse_event("skip", {
+                        "current": idx,
+                        "total": total,
+                        "reason": "No text content",
+                        "message": f"Skipping email {idx}: no content"
+                    })
+                    continue
                 
-                qdrant.upsert_by_type("blogs", blog_points)
-                results["blogs"] += len(blogs)
-            
-            results["emails_processed"] += 1
-            
-            # Progress event
-            yield sse_event("progress", {
-                "current": idx,
-                "total": total,
-                "events_total": results["events"],
-                "courses_total": results["courses"],
-                "blogs_total": results["blogs"],
-                "message": f"Processed {idx}/{total} emails"
-            })
-            
-            # Small delay to prevent overwhelming
-            await asyncio.sleep(0.1)
-            
-        except Exception as e:
-            logger.error(f"Error processing email {email_id}: {e}")
-            results["errors"].append({
-                "email_id": email_id,
-                "error": str(e)
-            })
-            yield sse_event("error", {
-                "current": idx,
-                "total": total,
-                "email_id": email_id,
-                "error": str(e),
-                "message": f"Error processing email {idx}"
-            })
+                # Extract content (pass images for blog extraction)
+                update_progress(message=f"Extracting content from: {subject[:40]}...")
+                yield sse_event("extract", {
+                    "current": idx,
+                    "total": total,
+                    "subject": subject[:50],
+                    "message": f"Extracting content from: {subject[:40]}..."
+                })
+                
+                extracted = await orchestrator.extract_all(text_content, subject, images)
+                
+                events = extracted.get("events", [])
+                courses = extracted.get("courses", [])
+                blogs = extracted.get("blogs", [])
+                
+                extracted_count = len(events) + len(courses) + len(blogs)
+                
+                if extracted_count == 0:
+                    yield sse_event("skip", {
+                        "current": idx,
+                        "total": total,
+                        "reason": "No content extracted",
+                        "message": f"No extractable content in email {idx}"
+                    })
+                    continue
+                
+                # Ingest to Qdrant
+                yield sse_event("ingest", {
+                    "current": idx,
+                    "total": total,
+                    "events": len(events),
+                    "courses": len(courses),
+                    "blogs": len(blogs),
+                    "message": f"Ingesting {extracted_count} items to Qdrant"
+                })
+                
+                sender_name, sender_email_addr = _parse_sender(sender)
+                
+                # Create points for events
+                if events:
+                    event_points = []
+                    for event in events:
+                        point_id = str(uuid.uuid4())
+                        vectors = embedder.create_named_vectors(
+                            title=event.title,
+                            description=event.description or event.title,
+                            full_text=f"{event.title} {event.description or ''}"
+                        )
+                        
+                        payload = {
+                            "title": event.title,
+                            "description": event.description,
+                            "start_time": event.start_time,
+                            "end_time": event.end_time,
+                            "location": event.location,
+                            "registration_link": event.registration_link,
+                            "tags": event.tags,
+                            "organizer": event.organizer,
+                            "cost": event.cost,
+                            "source_email_id": email_id,
+                            "source_subject": subject,
+                            "source_sender": sender_name,
+                            "source_sender_email": sender_email_addr,
+                            "source_received_at": date,
+                            "extracted_at": datetime.now().isoformat()
+                        }
+                        
+                        # Add sparse vector
+                        sparse_text = f"{event.title} {' '.join(event.tags)}"
+                        sparse_vec = create_sparse_vector(sparse_text)
+                        
+                        event_points.append(PointStruct(
+                            id=point_id,
+                            vector=vectors,
+                            payload=payload
+                        ))
+                    
+                    qdrant.upsert_by_type("events", event_points)
+                    results["events"] += len(events)
+                
+                # Create points for courses
+                if courses:
+                    course_points = []
+                    for course in courses:
+                        point_id = str(uuid.uuid4())
+                        vectors = embedder.create_named_vectors(
+                            title=course.title,
+                            description=course.description or course.title,
+                            full_text=f"{course.title} {course.description or ''}"
+                        )
+                        
+                        payload = {
+                            "title": course.title,
+                            "description": course.description,
+                            "provider": course.provider,
+                            "instructor": course.instructor,
+                            "level": course.level.value if course.level else None,
+                            "duration": course.duration,
+                            "cost": course.cost,
+                            "enrollment_link": course.enrollment_link,
+                            "tags": course.tags,
+                            "start_date": course.start_date,
+                            "certificate_offered": course.certificate_offered,
+                            "source_email_id": email_id,
+                            "source_subject": subject,
+                            "source_sender": sender_name,
+                            "source_sender_email": sender_email_addr,
+                            "source_received_at": date,
+                            "extracted_at": datetime.now().isoformat()
+                        }
+                        
+                        course_points.append(PointStruct(
+                            id=point_id,
+                            vector=vectors,
+                            payload=payload
+                        ))
+                    
+                    qdrant.upsert_by_type("courses", course_points)
+                    results["courses"] += len(courses)
+                
+                # Create points for blogs
+                if blogs:
+                    blog_points = []
+                    for blog in blogs:
+                        point_id = str(uuid.uuid4())
+                        vectors = embedder.create_named_vectors(
+                            title=blog.title,
+                            description=blog.description or blog.title,
+                            full_text=f"{blog.title} {blog.description or ''}"
+                        )
+                        
+                        payload = {
+                            "title": blog.title,
+                            "hook": blog.hook,
+                            "description": blog.description,
+                            "image_url": blog.image_url,
+                            "author": blog.author,
+                            "author_title": blog.author_title,
+                            "published_date": blog.published_date,
+                            "url": blog.url,
+                            "category": blog.category,
+                            "reading_time": blog.reading_time,
+                            "tags": blog.tags,
+                            "source": blog.source,
+                            "key_points": blog.key_points,
+                            "source_email_id": email_id,
+                            "source_subject": subject,
+                            "source_sender": sender_name,
+                            "source_sender_email": sender_email_addr,
+                            "source_received_at": date,
+                            "extracted_at": datetime.now().isoformat()
+                        }
+                        
+                        blog_points.append(PointStruct(
+                            id=point_id,
+                            vector=vectors,
+                            payload=payload
+                        ))
+                    
+                    qdrant.upsert_by_type("blogs", blog_points)
+                    results["blogs"] += len(blogs)
+                
+                results["emails_processed"] += 1
+                
+                # Update global progress with totals
+                update_progress(
+                    current=idx,
+                    events=results["events"],
+                    courses=results["courses"],
+                    blogs=results["blogs"],
+                    message=f"Processed {idx}/{total} emails"
+                )
+                
+                # Progress event
+                yield sse_event("progress", {
+                    "current": idx,
+                    "total": total,
+                    "events_total": results["events"],
+                    "courses_total": results["courses"],
+                    "blogs_total": results["blogs"],
+                    "message": f"Processed {idx}/{total} emails"
+                })
+                
+                # Small delay to prevent overwhelming
+                await asyncio.sleep(0.1)
+                
+            except Exception as e:
+                logger.error(f"Error processing email {email_id}: {e}")
+                results["errors"].append({
+                    "email_id": email_id,
+                    "error": str(e)
+                })
+                yield sse_event("error", {
+                    "current": idx,
+                    "total": total,
+                    "email_id": email_id,
+                    "error": str(e),
+                    "message": f"Error processing email {idx}"
+                })
+        
+        # Complete event
+        yield sse_event("complete", {
+            "emails_processed": results["emails_processed"],
+            "events": results["events"],
+            "courses": results["courses"],
+            "blogs": results["blogs"],
+            "total_extracted": results["events"] + results["courses"] + results["blogs"],
+            "errors": len(results["errors"]),
+            "message": "Extraction complete!"
+        })
     
-    # Complete event
-    yield sse_event("complete", {
-        "emails_processed": results["emails_processed"],
-        "events": results["events"],
-        "courses": results["courses"],
-        "blogs": results["blogs"],
-        "total_extracted": results["events"] + results["courses"] + results["blogs"],
-        "errors": len(results["errors"]),
-        "message": "Extraction complete!"
-    })
+    finally:
+        # Always reset extraction state when done
+        _extraction_in_progress = False
+        logger.info(f"Extraction complete: {results['emails_processed']} emails, {results['events']} events, {results['courses']} courses, {results['blogs']} blogs")
 
 
 @router.post("/extract")

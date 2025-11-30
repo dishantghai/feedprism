@@ -46,7 +46,7 @@
 
 **Current P1 Items:**
 - F-001: Metrics Dashboard Panel
-- I-001: Re-extract emails for new fields
+- I-001: Re-extract emails for new fields (now has image_url, hook, etc.)
 
 **Workflow:** `03_product_management/WORKFLOW.md` explains the minimal AI-assisted spec-driven process.
 
@@ -89,19 +89,26 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **B-001: SSE Extraction State Sync** - Frontend now syncs with backend extraction state
+  - Added `/api/pipeline/extraction-status` endpoint with global state tracking
+  - Frontend checks status on mount and polls during extraction
+  - Page refresh mid-extraction now shows progress instead of stale state
+- ✅ **F-003: Capture Blog Images and Hooks**
+  - Extract images from HTML before text conversion (filter tracking pixels)
+  - Pass images to LLM for blog extraction
+  - Enhanced hook extraction prompts with examples
+  - Store all blog fields in Qdrant (hook, image_url, author_title, key_points)
+- ✅ **F-002: Fix Blog View**
+  - Enhanced BlogCard with prominent images and larger size
+  - Better content display for engagement
 - ✅ Created minimal Product Management System in `03_product_management/`
   - `WORKFLOW.md` - AI-assisted spec-driven development process
   - `BACKLOG.md` - Simple prioritized backlog (F/B/I/T items)
   - `specs/` - Active spec files for in-progress work
 - ✅ Rename Phase 6-9 docs to non-phase names (not product phases)
-  - `Phase_6_UI_Demo.md` → `UI_Demo_Guide.md`
-  - `Phase_7_Final_Polish.md` → `Final_Polish_Guide.md`
-  - `Phase_8_Hackathon_Submission_Guide.md` → `Hackathon_Submission_Guide.md`
-  - `Phase_9_Spayce_Integration_Guide.md` → `Spayce_Integration_Guide.md`
 - ✅ Fix stale fetch lock issue (429 errors after server restart)
   - Auto-reset lock after 2 minute timeout
   - Added `/api/pipeline/reset-fetch-lock` endpoint for manual reset
-  - Track fetch start timestamp for timeout detection
 
 ### Nov 29, 2025
 - ✅ Phase 4: Command Bar & Filters implementation
@@ -119,7 +126,8 @@
 
 - Gmail API SSL errors on concurrent requests → Fixed with `_fetch_in_progress` guard
 - Stale fetch lock after server crash → Fixed with auto-reset timeout (2 min)
-- Feed cards need re-extraction to populate new fields (hook, image_url, etc.)
+- SSE disconnection on page refresh → Fixed with extraction status endpoint + polling
+- Feed cards need re-extraction to populate new fields (hook, image_url, etc.) → New extractions now include all fields
 
 ---
 

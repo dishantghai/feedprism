@@ -8,7 +8,7 @@ Author: FeedPrism Team
 """
 
 import json
-from typing import Optional
+from typing import Dict, List, Optional
 
 from openai import AsyncOpenAI
 from loguru import logger
@@ -111,12 +111,19 @@ class LLMExtractor:
     async def extract_blogs(
         self,
         email_text: str,
-        email_subject: str = ""
+        email_subject: str = "",
+        images: List[Dict[str, str]] = None
     ) -> BlogExtractionResult:
-        """Extract blog/article information from email text."""
+        """Extract blog/article information from email text.
+        
+        Args:
+            email_text: Parsed email content
+            email_subject: Email subject line
+            images: List of image dicts with 'src' and 'alt' keys extracted from HTML
+        """
         logger.info(f"Extracting blogs from: '{email_subject[:50]}...'")
         
-        prompt = self._build_blog_prompt(email_text, email_subject)
+        prompt = self._build_blog_prompt(email_text, email_subject, images)
         try:
             response = await self.client.beta.chat.completions.parse(
                 model=self.model,
@@ -256,11 +263,27 @@ For each course found, extract:
 Return confidence 0.0 and empty array if no courses found.
 """
     
-    def _build_blog_prompt(self, email_text: str, email_subject: str) -> str:
-        """Build blog extraction prompt."""
+    def _build_blog_prompt(
+        self,
+        email_text: str,
+        email_subject: str,
+        images: List[Dict[str, str]] = None
+    ) -> str:
+        """Build blog extraction prompt with image context."""
         truncated = email_text[:4000]
         if len(email_text) > 4000:
             truncated += "\n\n[... truncated ...]"
+        
+        # Build image context section
+        image_section = ""
+        if images and len(images) > 0:
+            image_section = "\n\n=== IMAGES FOUND IN EMAIL ===\n"
+            for img in images[:10]:  # Limit to 10 images
+                image_section += f"- {img['src']}"
+                if img.get('alt'):
+                    image_section += f" (alt: {img['alt']})"
+                image_section += "\n"
+            image_section += "\nUse these URLs for the image_url field when they match article content.\n"
         
         return f"""Extract ARTICLES AND BLOG POSTS from this email.
 
@@ -293,11 +316,33 @@ Email Subject: {email_subject}
 
 Email Content:
 {truncated}
+{image_section}
+=== HOOK EXTRACTION (CRITICAL FOR ENGAGEMENT) ===
+The hook is the MOST IMPORTANT field. It's the teaser that makes someone click and read.
+
+FIND THE HOOK in:
+1. Opening sentence that teases the content
+2. Pull quotes or highlighted text
+3. "Why X matters...", "How to...", "The secret to..."
+4. Statistics or surprising facts ("90% of developers...")
+5. Questions that pique curiosity ("What if you could...?")
+
+If no explicit hook exists in the email, CREATE ONE from the article's main value proposition.
+
+GOOD HOOKS (compelling, specific):
+- "The counterintuitive approach that helped Stripe scale to millions of requests"
+- "Why your RAG pipeline is probably broken (and how to fix it)"
+- "3 lessons from building AI products that nobody talks about"
+
+BAD HOOKS (avoid these):
+- "This is an article about AI" (too generic)
+- "Read this article" (not compelling)
+- Just repeating the title (no added value)
 
 === EXTRACTION INSTRUCTIONS ===
 For each article/blog found, extract:
 - title: Article headline
-- hook: The compelling teaser/opening that makes you want to read (CRITICAL - extract from email text)
+- hook: Compelling teaser (REQUIRED - create one if not explicit)
 - description: Brief summary of article content
 - author: Writer's name
 - author_title: Their role if mentioned (e.g., "CTO at Stripe")
@@ -307,14 +352,8 @@ For each article/blog found, extract:
 - reading_time: Estimated read time if mentioned
 - source: Publication/newsletter name
 - key_points: 3-5 main takeaways from the article
-- image_url: Article thumbnail/hero image if found
+- image_url: Article thumbnail/hero image URL from the images list above
 - tags: Relevant topics
-
-Look for hooks in:
-- Opening sentences that tease content
-- "Why X matters...", "How to...", "The secret to..."
-- Statistics or surprising facts
-- Questions that pique curiosity
 
 Return confidence 0.0 and empty array if no articles found.
 """

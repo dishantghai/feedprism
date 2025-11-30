@@ -12,11 +12,12 @@
 Priority: P1
 Frontend metrics panel showing precision@k, latency, extraction counts, and pipeline health.
 
-#### F-002: Loading States & Skeleton UI
+
+#### F-005: Loading States & Skeleton UI
 Priority: P2
 Add proper loading skeletons and states across all views for better perceived performance.
 
-#### F-003: Micro-animations & Polish
+#### F-006: Micro-animations & Polish
 Priority: P2
 Subtle transitions, hover effects, and visual polish for production-ready feel.
 
@@ -44,7 +45,14 @@ Feed cards need re-extraction to populate new fields (hook, image_url, etc.) add
 
 ## Completed
 
-*Move completed items here with ✅ prefix, then archive specs monthly.*
+#### ✅ B-001: SSE Extraction State Sync (Nov 30, 2025)
+Backend status endpoint + frontend polling to sync extraction state on page refresh.
+
+#### ✅ F-003: Capture Blog Images and Hooks (Nov 30, 2025)
+Backend: Extract images from HTML, pass to LLM, enhanced hook prompts, store all blog fields in Qdrant.
+
+#### ✅ F-002: Fix Blog View (Nov 30, 2025)
+Frontend: Enhanced BlogCard with prominent images, larger size, and more content display.
 
 ---
 

@@ -10,7 +10,7 @@
  * On page reload, resets to show new unprocessed emails.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronDown, ChevronUp, Sparkles, RefreshCw } from 'lucide-react';
 import { RawFeedPanel } from './RawFeedPanel';
 import { PrismVisual } from './PrismVisual';
@@ -90,9 +90,76 @@ export function PrismOverview({ defaultExpanded = true }: PrismOverviewProps) {
         }
     }, [extractionState]);
 
-    // Only fetch on initial mount
+    // Polling interval ref for extraction status
+    const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Check extraction status and start polling if extraction is in progress
+    const checkExtractionStatus = useCallback(async () => {
+        try {
+            const status = await api.getExtractionStatus();
+
+            if (status.is_extracting && status.progress) {
+                // Extraction is running - sync state
+                setExtractionState('extracting');
+                setProgress({
+                    current: status.progress.current,
+                    total: status.progress.total,
+                    message: status.progress.message,
+                    events: status.progress.events,
+                    courses: status.progress.courses,
+                    blogs: status.progress.blogs,
+                });
+                return true; // Still extracting
+            }
+            return false; // Not extracting
+        } catch (err) {
+            console.error('Failed to check extraction status:', err);
+            return false;
+        }
+    }, []);
+
+    // Start polling for extraction status
+    const startPolling = useCallback(() => {
+        if (pollingRef.current) return; // Already polling
+
+        pollingRef.current = setInterval(async () => {
+            const stillExtracting = await checkExtractionStatus();
+            if (!stillExtracting) {
+                // Extraction finished - stop polling and refresh
+                if (pollingRef.current) {
+                    clearInterval(pollingRef.current);
+                    pollingRef.current = null;
+                }
+                // Refresh to get final state
+                fetchUnprocessedEmails(true);
+            }
+        }, 2000); // Poll every 2 seconds
+    }, [checkExtractionStatus, fetchUnprocessedEmails]);
+
+    // Stop polling
+    const stopPolling = useCallback(() => {
+        if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+        }
+    }, []);
+
+    // On mount: check if extraction is already running, then fetch emails
     useEffect(() => {
-        fetchUnprocessedEmails(true);
+        const init = async () => {
+            const isExtracting = await checkExtractionStatus();
+            if (isExtracting) {
+                // Start polling to track progress
+                startPolling();
+            } else {
+                // No extraction running - fetch emails normally
+                fetchUnprocessedEmails(true);
+            }
+        };
+        init();
+
+        // Cleanup polling on unmount
+        return () => stopPolling();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

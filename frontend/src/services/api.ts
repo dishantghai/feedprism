@@ -195,6 +195,32 @@ export async function getPipelineSettings(): Promise<PipelineSettings> {
 }
 
 /**
+ * Extraction status response from backend.
+ */
+export interface ExtractionStatusResponse {
+    is_extracting: boolean;
+    progress: {
+        current: number;
+        total: number;
+        events: number;
+        courses: number;
+        blogs: number;
+        message: string;
+        emails_processed: number;
+        errors: number;
+    } | null;
+    started_at: string | null;
+}
+
+/**
+ * Get current extraction pipeline status.
+ * Used to sync frontend state on page load or after SSE disconnection.
+ */
+export async function getExtractionStatus(): Promise<ExtractionStatusResponse> {
+    return fetchJson<ExtractionStatusResponse>(`${API_BASE}/pipeline/extraction-status`);
+}
+
+/**
  * Start extraction pipeline with SSE streaming.
  * Returns an EventSource that emits progress events.
  */
@@ -299,6 +325,7 @@ export const api = {
     // Pipeline
     getUnprocessedEmails,
     getPipelineSettings,
+    getExtractionStatus,
     startExtraction,
 };
 

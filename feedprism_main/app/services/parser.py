@@ -70,6 +70,7 @@ class EmailParser:
             - 'clean_html': Cleaned HTML (scripts/styles removed)
             - 'text': Plain text conversion
             - 'links': Extracted links (list of dicts)
+            - 'images': Extracted content images (list of dicts with src, alt)
             - 'title': Email title (if <title> tag exists)
         
         Example:
@@ -84,6 +85,7 @@ class EmailParser:
                 'clean_html': '',
                 'text': '',
                 'links': [],
+                'images': [],
                 'title': ''
             }
         
@@ -95,6 +97,9 @@ class EmailParser:
             title_tag = soup.find('title')
             title = title_tag.get_text(strip=True) if title_tag else ''
             
+            # Extract images BEFORE cleaning (cleaning removes tracking pixels)
+            images = self._extract_images(soup)
+            
             # Clean HTML
             clean_soup = self._clean_html(soup)
             clean_html = str(clean_soup)
@@ -105,12 +110,13 @@ class EmailParser:
             # Extract links
             links = self._extract_links(clean_soup)
             
-            logger.success(f"Parsed email: {len(text)} chars, {len(links)} links")
+            logger.success(f"Parsed email: {len(text)} chars, {len(links)} links, {len(images)} images")
             
             return {
                 'clean_html': clean_html,
                 'text': text,
                 'links': links,
+                'images': images,
                 'title': title
             }
             
@@ -121,6 +127,7 @@ class EmailParser:
                 'clean_html': html_content,
                 'text': self._fallback_text_extraction(html_content),
                 'links': [],
+                'images': [],
                 'title': ''
             }
     
@@ -219,6 +226,81 @@ class EmailParser:
         except Exception:
             logger.warning("Fallback text extraction also failed, returning raw HTML")
             return html
+    
+    def _extract_images(self, soup: BeautifulSoup) -> List[Dict[str, str]]:
+        """
+        Extract content images from HTML (filtering out tracking pixels).
+        
+        Args:
+            soup: BeautifulSoup object
+        
+        Returns:
+            List of dicts with 'src' and 'alt' keys
+        """
+        images = []
+        
+        for img in soup.find_all('img', src=True):
+            src = img.get('src', '')
+            alt = img.get('alt', '')
+            width = img.get('width', '')
+            height = img.get('height', '')
+            
+            # Skip empty src
+            if not src:
+                continue
+            
+            # Skip tracking pixels (1x1)
+            if width == '1' or height == '1':
+                continue
+            
+            # Skip tiny images (likely icons)
+            try:
+                if width and height:
+                    w = int(str(width).replace('px', ''))
+                    h = int(str(height).replace('px', ''))
+                    if w < 50 and h < 50:
+                        continue
+            except (ValueError, TypeError):
+                pass
+            
+            # Skip common tracking/icon patterns in URL
+            skip_patterns = [
+                'tracking', 'pixel', 'beacon', 'spacer', 'icon',
+                'logo', 'avatar', 'emoji', 'button', 'arrow',
+                'social', 'facebook', 'twitter', 'linkedin', 'instagram',
+                '1x1', 'blank', 'transparent', 'gif'
+            ]
+            src_lower = src.lower()
+            if any(pattern in src_lower for pattern in skip_patterns):
+                continue
+            
+            # Skip data URIs (inline images, usually small)
+            if src.startswith('data:'):
+                continue
+            
+            # Validate URL has proper scheme
+            try:
+                parsed = urlparse(src)
+                if not parsed.scheme or parsed.scheme not in ['http', 'https']:
+                    continue
+            except Exception:
+                continue
+            
+            images.append({
+                'src': src,
+                'alt': alt
+            })
+        
+        # Deduplicate by src
+        seen = set()
+        unique_images = []
+        for img in images:
+            if img['src'] not in seen:
+                seen.add(img['src'])
+                unique_images.append(img)
+        
+        logger.debug(f"Extracted {len(unique_images)} content images")
+        return unique_images
     
     def _extract_links(self, soup: BeautifulSoup) -> List[Dict[str, str]]:
         """

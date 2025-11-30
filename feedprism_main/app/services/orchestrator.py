@@ -21,7 +21,8 @@ class ExtractionOrchestrator:
     async def extract_all(
         self,
         email_text: str,
-        email_subject: str = ""
+        email_subject: str = "",
+        images: List[Dict[str, str]] = None
     ) -> Dict[str, List]:
         """
         Extract all content types from email in parallel.
@@ -29,6 +30,7 @@ class ExtractionOrchestrator:
         Args:
             email_text: Parsed email content
             email_subject: Email subject
+            images: List of image dicts with 'src' and 'alt' keys (for blog extraction)
         
         Returns:
             Dict with 'events', 'courses', 'blogs' keys
@@ -36,9 +38,10 @@ class ExtractionOrchestrator:
         logger.info("Starting multi-content extraction")
         
         # Run all extractions in parallel
+        # Note: images are passed to blog extraction for image_url population
         events_task = self.extractor.extract_events(email_text, email_subject)
         courses_task = self.extractor.extract_courses(email_text, email_subject)
-        blogs_task = self.extractor.extract_blogs(email_text, email_subject)
+        blogs_task = self.extractor.extract_blogs(email_text, email_subject, images)
         
         # Await all results
         events_result, courses_result, blogs_result = await asyncio.gather(
