@@ -3,7 +3,7 @@ import { Layout } from './components/layout';
 import { PrismOverview } from './components/prism';
 import { FeedList } from './components/feed';
 import { CommandPalette } from './components/search';
-import { MetricsGridSkeleton } from './components/ui';
+import { MetricsDashboard } from './components/Metrics';
 import { useCommandK } from './hooks';
 import { api } from './services/api';
 import type { MetricsResponse, ViewType, FeedItem } from './types';
@@ -88,9 +88,7 @@ function App() {
         {activeView === 'courses' && <FeedList filterType="course" title="Courses" />}
         {activeView === 'blogs' && <FeedList filterType="blog" title="Blogs" />}
         {activeView === 'actions' && <PlaceholderView type="actions" />}
-        {activeView === 'metrics' && (
-          <MetricsView metrics={metrics} loading={loading} error={error} />
-        )}
+        {activeView === 'metrics' && <MetricsDashboard />}
         {activeView === 'inbox' && <PlaceholderView type="inbox" />}
         {activeView === 'settings' && <PlaceholderView type="settings" />}
       </Layout>
@@ -139,79 +137,6 @@ function HomeView({ error }: HomeViewProps) {
 }
 
 // =============================================================================
-// Metrics View
-// =============================================================================
-
-interface MetricsViewProps {
-  metrics: MetricsResponse | null;
-  loading: boolean;
-  error: string | null;
-}
-
-function MetricsView({ metrics, loading, error }: MetricsViewProps) {
-  if (loading) {
-    return <MetricsGridSkeleton />;
-  }
-
-  if (error) {
-    return (
-      <div className="py-4 px-4 bg-red-50 rounded-lg border border-red-200">
-        <p className="text-red-600 text-sm">{error}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Quality Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard
-          label="Precision"
-          value={`${((metrics?.precision ?? 0) * 100).toFixed(0)}%`}
-          icon={<span className="text-green-500">●</span>}
-        />
-        <StatCard
-          label="MRR"
-          value={`${((metrics?.mrr ?? 0) * 100).toFixed(0)}%`}
-          icon={<span className="text-green-500">●</span>}
-        />
-        <StatCard
-          label="Avg Latency"
-          value={`${metrics?.avg_latency_ms?.toFixed(0) ?? 0}ms`}
-          icon={<span className="text-yellow-500">●</span>}
-        />
-        <StatCard
-          label="Dedup Rate"
-          value={`${((metrics?.dedup_rate ?? 0) * 100).toFixed(0)}%`}
-          icon={<span className="text-blue-500">●</span>}
-        />
-      </div>
-
-      {/* Top Tags */}
-      {metrics?.top_tags && Object.keys(metrics.top_tags).length > 0 && (
-        <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border-light)] p-4">
-          <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-3">
-            Top Tags
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(metrics.top_tags)
-              .slice(0, 10)
-              .map(([tag, count]) => (
-                <span
-                  key={tag}
-                  className="px-2 py-1 text-xs bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] rounded-md"
-                >
-                  {tag} ({count})
-                </span>
-              ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =============================================================================
 // Placeholder View
 // =============================================================================
 
@@ -220,30 +145,6 @@ function PlaceholderView({ type }: { type: string }) {
     <div className="p-12 border-2 border-dashed border-[var(--color-border-light)] rounded-xl text-center">
       <p className="text-[var(--color-text-tertiary)] capitalize">
         {type} view coming soon...
-      </p>
-    </div>
-  );
-}
-
-// =============================================================================
-// Stat Card Component
-// =============================================================================
-
-interface StatCardProps {
-  label: string;
-  value: number | string;
-  icon?: React.ReactNode;
-}
-
-function StatCard({ label, value, icon }: StatCardProps) {
-  return (
-    <div className="p-4 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border-light)]">
-      <div className="flex items-center gap-2 mb-1">
-        {icon}
-        <span className="text-xs text-[var(--color-text-tertiary)]">{label}</span>
-      </div>
-      <p className="text-2xl font-semibold text-[var(--color-text-primary)]">
-        {value}
       </p>
     </div>
   );

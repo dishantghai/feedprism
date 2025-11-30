@@ -4,7 +4,7 @@ Metrics Router
 Endpoints for dashboard metrics and analytics.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Query
 from loguru import logger
 

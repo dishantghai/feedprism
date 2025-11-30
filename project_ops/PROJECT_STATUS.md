@@ -88,6 +88,14 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-001: Metrics Dashboard & System Health**
+  - Full MetricsDashboard component with Recharts
+  - Quality metrics: Precision@10, MRR, Latency p95, Dedup Rate
+  - Trend charts: 24-hour quality and latency trends
+  - Ingestion stats: emails processed, items extracted, by category
+  - Health panel: system status, Qdrant connection
+  - Auto-refresh every 30 seconds
+  - Color-coded stat cards with trend indicators
 - ✅ **F-015: Course View Enhancement**
   - Provider branding (Coursera, Udemy, edX, etc.) with color-coded badges
   - Instructor name with user icon

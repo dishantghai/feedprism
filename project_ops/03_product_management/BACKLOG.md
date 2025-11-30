@@ -39,6 +39,9 @@ Frontend metrics panel showing precision@k, latency, extraction counts, and pipe
 
 ## Completed
 
+#### ✅ F-001: Metrics Dashboard & System Health (Nov 30, 2025)
+Full dashboard with quality metrics, trend charts (Recharts), ingestion stats, health panel, auto-refresh.
+
 #### ✅ F-015: Course View Enhancement (Nov 30, 2025)
 Provider branding, instructor/level/duration/cost display, Enroll Now CTA, View Source button.
 
