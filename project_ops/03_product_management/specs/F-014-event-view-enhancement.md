@@ -1,5 +1,7 @@
 # F-014: Event View Enhancement
 
+**Status:** ✅ Complete (Nov 30, 2025)
+
 ## Problem
 The current Event views (both in Recent Extractions and Detail View) are sparse and unengaging. They lack sufficient content context, are too small to be noticeable, and fail to provide a direct link to the original source email. This makes it difficult for users to decide if an event is worth attending without digging deeper.
 

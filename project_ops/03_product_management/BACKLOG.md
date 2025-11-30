@@ -35,6 +35,9 @@ Frontend metrics panel showing precision@k, latency, extraction counts, and pipe
 
 ## Completed
 
+#### ✅ F-014: Event View Enhancement (Nov 30, 2025)
+Enhanced EventCard with larger date badge, description, Register/Add to Calendar CTAs, View Source link.
+
 #### ✅ F-008: Source Email Modal (Nov 30, 2025)
 View original email in modal with HTML body, metadata, and "Open in Gmail" action.
 

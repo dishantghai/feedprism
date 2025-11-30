@@ -7,6 +7,7 @@
  * - Clean typography with subtle type indicators
  */
 
+import { useState } from 'react';
 import {
     Calendar,
     MapPin,
@@ -14,12 +15,13 @@ import {
     ExternalLink,
     FileText,
     GraduationCap,
-    Video,
     Globe,
     ArrowRight,
-    User
+    User,
+    Mail,
+    CalendarPlus
 } from 'lucide-react';
-import { formatRelativeTime } from '../../lib/utils';
+import { EmailModal } from '../email';
 import type { FeedItem } from '../../types';
 
 interface ExtractedItemCardProps {
@@ -89,8 +91,9 @@ export function ExtractedItemCard({
     showEmailAttribution = true
 }: ExtractedItemCardProps) {
     // Render based on item type
+    // Events always get full card treatment (no compact mode) - they need CTAs
     if (item.item_type === 'event') {
-        return <EventCard item={item} onClick={onClick} compact={compact} showEmailAttribution={showEmailAttribution} />;
+        return <EventCard item={item} onClick={onClick} />;
     }
 
     if (item.item_type === 'course') {
@@ -104,164 +107,154 @@ export function ExtractedItemCard({
 // Event Card - Calendar-style with date badge
 // =============================================================================
 
-function EventCard({ item, onClick, compact, showEmailAttribution }: {
+function EventCard({ item, onClick }: {
     item: FeedItem;
     onClick?: () => void;
-    compact: boolean;
-    showEmailAttribution: boolean;
 }) {
+    const [showEmailModal, setShowEmailModal] = useState(false);
     const eventDate = parseEventDate(item.start_time);
     const isSoon = isEventSoon(item.start_time);
-    const eventTime = item.start_time ? formatRelativeTime(item.start_time) : null;
 
-    if (compact) {
-        return (
-            <div
-                onClick={onClick}
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer group"
-            >
-                {/* Image or Date badge */}
-                {item.image_url ? (
-                    <img
-                        src={item.image_url}
-                        alt=""
-                        className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    />
-                ) : (
-                    <div className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center flex-shrink-0 ${isSoon ? 'bg-red-500 text-white' : 'bg-blue-100 text-blue-700'}`}>
-                        {eventDate ? (
-                            <>
-                                <span className="text-[10px] font-medium leading-none">{eventDate.month}</span>
-                                <span className="text-lg font-bold leading-none">{eventDate.day}</span>
-                            </>
-                        ) : (
-                            <Calendar className="w-5 h-5" />
-                        )}
-                    </div>
-                )}
+    // Generate Google Calendar link
+    const getCalendarLink = () => {
+        if (!item.start_time) return null;
+        const start = new Date(item.start_time);
+        const end = item.end_time ? new Date(item.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
+        const formatDate = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const params = new URLSearchParams({
+            action: 'TEMPLATE',
+            text: item.title,
+            dates: `${formatDate(start)}/${formatDate(end)}`,
+            details: item.description || '',
+            location: item.location || '',
+        });
+        return `https://calendar.google.com/calendar/render?${params}`;
+    };
 
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                        {item.title}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
-                        {item.event_type && (
-                            <span className="text-blue-600 font-medium">{getEventTypeLabel(item.event_type)}</span>
-                        )}
-                        {item.location && (
-                            <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
-                                <span className="truncate max-w-[100px]">{item.location}</span>
-                            </span>
-                        )}
-                        {eventTime && <span>{eventTime}</span>}
-                        {item.is_free && <span className="text-green-600">Free</span>}
-                    </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-[var(--color-text-tertiary)] opacity-0 group-hover:opacity-100" />
-            </div>
-        );
-    }
+    // Events always get the full card treatment - they need CTAs
+    // No compact mode for events - they're too important to minimize
 
     return (
-        <div
-            onClick={onClick}
-            className="bg-[var(--color-bg-primary)] rounded-xl border border-[var(--color-border-light)] hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group overflow-hidden"
-        >
-            <div className="flex">
-                {/* Date Badge - Left side */}
-                <div className={`w-20 flex-shrink-0 flex flex-col items-center justify-center py-4 ${isSoon
-                    ? 'bg-gradient-to-b from-red-500 to-red-600 text-white'
-                    : 'bg-gradient-to-b from-blue-500 to-blue-600 text-white'
-                    }`}>
-                    {eventDate ? (
-                        <>
-                            <span className="text-xs font-medium opacity-90">{eventDate.weekday}</span>
-                            <span className="text-2xl font-bold">{eventDate.day}</span>
-                            <span className="text-xs font-medium opacity-90">{eventDate.month}</span>
-                        </>
-                    ) : (
-                        <Calendar className="w-8 h-8 opacity-80" />
-                    )}
-                    {isSoon && (
-                        <span className="mt-1 text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">
-                            SOON
-                        </span>
-                    )}
-                </div>
-
-                {/* Content - Right side */}
-                <div className="flex-1 p-4">
-                    <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                        {item.title}
-                    </h3>
-
-                    {/* Hook or description */}
-                    {(item.hook || item.description) && (
-                        <p className="text-sm text-[var(--color-text-secondary)] mb-3 line-clamp-2">
-                            {item.hook || item.description}
-                        </p>
-                    )}
-
-                    {/* Event type badge + meta */}
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-tertiary)]">
-                        {item.event_type && (
-                            <span className="flex items-center gap-1 text-blue-600">
-                                {item.event_type === 'webinar' ? <Video className="w-3.5 h-3.5" /> : <Calendar className="w-3.5 h-3.5" />}
-                                {getEventTypeLabel(item.event_type)}
-                            </span>
+        <>
+            <div
+                onClick={onClick}
+                className="bg-[var(--color-bg-primary)] rounded-xl border border-[var(--color-border-light)] hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group overflow-hidden"
+            >
+                <div className="flex">
+                    {/* Date Badge - Left side (more compact) */}
+                    <div className={`w-18 flex-shrink-0 flex flex-col items-center justify-center py-3 px-3 ${isSoon
+                        ? 'bg-gradient-to-b from-red-500 to-red-600 text-white'
+                        : 'bg-gradient-to-b from-blue-500 to-blue-600 text-white'
+                        }`}>
+                        {eventDate ? (
+                            <>
+                                <span className="text-[10px] font-medium opacity-90 uppercase">{eventDate.weekday}</span>
+                                <span className="text-2xl font-bold leading-tight">{eventDate.day}</span>
+                                <span className="text-xs font-medium opacity-90">{eventDate.month}</span>
+                            </>
+                        ) : (
+                            <Calendar className="w-7 h-7 opacity-80" />
                         )}
-                        {item.location && (
-                            <span className="flex items-center gap-1">
-                                <MapPin className="w-3.5 h-3.5" />
-                                <span className="truncate max-w-[120px]">{item.location}</span>
+                        {isSoon && (
+                            <span className="mt-1 text-[9px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase">
+                                Soon
                             </span>
-                        )}
-                        {eventTime && (
-                            <span className="flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5" />
-                                {eventTime}
-                            </span>
-                        )}
-                        {item.is_free && (
-                            <span className="text-green-600 font-medium">Free</span>
                         )}
                     </div>
 
-                    {/* Tags */}
-                    {item.tags && item.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-3">
-                            {item.tags.slice(0, 3).map((tag, index) => (
-                                <span key={index} className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
-                                    {tag}
-                                </span>
-                            ))}
+                    {/* Content - Right side (more compact) */}
+                    <div className="flex-1 p-3">
+                        {/* Title + badges row */}
+                        <div className="flex items-start gap-2 mb-1">
+                            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] line-clamp-2 group-hover:text-blue-600 transition-colors leading-snug flex-1">
+                                {item.title}
+                            </h3>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                                {item.event_type && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                                        {getEventTypeLabel(item.event_type)}
+                                    </span>
+                                )}
+                                {item.is_free && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-700">
+                                        Free
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                    )}
 
-                    {/* Footer with attribution and action */}
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--color-border-light)]">
-                        {showEmailAttribution && (
-                            <span className="text-xs text-[var(--color-text-tertiary)] truncate max-w-[200px]">
-                                via {item.sender}
-                            </span>
+                        {/* Time + Location row */}
+                        <div className="flex items-center gap-3 text-xs text-[var(--color-text-tertiary)] mb-2">
+                            {eventDate && (
+                                <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {eventDate.time}
+                                </span>
+                            )}
+                            {item.location && (
+                                <span className="flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    <span className="truncate max-w-[150px]">{item.location}</span>
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Description - 2 lines max */}
+                        {(item.hook || item.description) && (
+                            <p className="text-xs text-[var(--color-text-secondary)] mb-2 line-clamp-2 leading-relaxed">
+                                {item.hook || item.description}
+                            </p>
                         )}
-                        {item.url && (
-                            <a
-                                href={item.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+
+                        {/* Action buttons - compact row */}
+                        <div className="flex items-center gap-2 pt-2 border-t border-[var(--color-border-light)]">
+                            {item.url && (
+                                <a
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+                                    style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
+                                >
+                                    Register <ExternalLink className="w-3 h-3" />
+                                </a>
+                            )}
+                            {getCalendarLink() && (
+                                <a
+                                    href={getCalendarLink()!}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors"
+                                    style={{ backgroundColor: '#f3f4f6', color: '#374151', borderColor: '#d1d5db' }}
+                                >
+                                    <CalendarPlus className="w-3 h-3" />
+                                    Calendar
+                                </a>
+                            )}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowEmailModal(true);
+                                }}
+                                className="inline-flex items-center gap-1 px-2 py-1.5 text-xs text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] transition-colors ml-auto"
                             >
-                                Register <ExternalLink className="w-3 h-3" />
-                            </a>
-                        )}
+                                <Mail className="w-3 h-3" />
+                                Source
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+
+            {/* Email Modal */}
+            <EmailModal
+                emailId={item.email_id}
+                isOpen={showEmailModal}
+                onClose={() => setShowEmailModal(false)}
+            />
+        </>
     );
 }
 

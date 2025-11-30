@@ -88,6 +88,13 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-014: Event View Enhancement**
+  - Enhanced EventCard with larger date badge (w-24) showing weekday/day/month/time
+  - Added description/hook preview (3 lines)
+  - Prominent "Register" button (blue CTA)
+  - "Add to Calendar" button (Google Calendar link)
+  - "View Source" link opens EmailModal
+  - Event type and Free badges
 - ✅ **F-008: Source Email Modal**
   - Backend: Added `include_body` param to `/api/emails/{id}` endpoint
   - Backend: Added `get_email_body()` method to Gmail client
