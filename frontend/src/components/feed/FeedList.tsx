@@ -12,6 +12,7 @@ import { FilterBar, SearchBar, type FilterState, type StatusFilter, type SortOpt
 import { QuickTagBar } from '../tags';
 import { FeedCardSkeleton } from '../ui';
 import { api } from '../../services/api';
+import { useDemo } from '../../contexts';
 import type { FeedItem, ItemType } from '../../types';
 
 interface FeedListProps {
@@ -34,6 +35,7 @@ export function FeedList({
     showRefresh = true,
     showFilters = false,
 }: FeedListProps) {
+    const { isDemo, isLoading: isDemoLoading, demoExtracted } = useDemo();
     const [items, setItems] = useState<FeedItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -116,10 +118,26 @@ export function FeedList({
 
         try {
             let response;
-            if (filterType) {
+
+            if (isDemo) {
+                // Demo mode: only show items after extraction
+                if (!demoExtracted) {
+                    // Not yet extracted - show empty feed
+                    setItems([]);
+                    setLoading(false);
+                    setRefreshing(false);
+                    return;
+                }
+                // Demo mode: use demo feed endpoint
+                const types = filterType
+                    ? [filterType]
+                    : (filters.types.length > 0 ? filters.types : undefined);
+                response = await api.getDemoFeed(1, limit, types);
+            } else if (filterType) {
+                // Normal mode with type filter
                 response = await api.getFeedByType(filterType, 1, limit);
             } else {
-                // Use sender and tag filters if set
+                // Normal mode: use sender and tag filters if set
                 response = await api.getFeed(
                     1,
                     limit,
@@ -128,7 +146,6 @@ export function FeedList({
                     filters.tags.length > 0 ? filters.tags : undefined
                 );
             }
-            console.log('Feed response:', response);
             setItems(response.items || []);
         } catch (err) {
             console.error('Failed to fetch feed:', err);
@@ -137,11 +154,14 @@ export function FeedList({
             setLoading(false);
             setRefreshing(false);
         }
-    }, [filterType, limit, filters.types, filters.senders, filters.tags]);
+    }, [isDemo, demoExtracted, filterType, limit, filters.types, filters.senders, filters.tags]);
 
     useEffect(() => {
-        fetchFeed();
-    }, [fetchFeed]);
+        // Wait for demo context to finish loading before fetching
+        if (!isDemoLoading) {
+            fetchFeed();
+        }
+    }, [fetchFeed, isDemoLoading, isDemo]);
 
     // Get all unique tags from items with counts (sorted by frequency)
     const allTagsWithCounts = useMemo(() => {
@@ -315,14 +335,14 @@ export function FeedList({
     // Empty state
     if (emailGroups.length === 0) {
         return (
-            <div className="py-16 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center">
+            <div className="py-16 flex flex-col items-center justify-center">
+                <div className="w-16 h-16 mb-4 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center">
                     <Inbox className="w-8 h-8 text-[var(--color-text-tertiary)]" />
                 </div>
-                <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+                <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2 text-center">
                     No items yet
                 </h3>
-                <p className="text-sm text-[var(--color-text-tertiary)] max-w-sm mx-auto">
+                <p className="text-sm text-[var(--color-text-tertiary)] max-w-sm text-center">
                     {filterType
                         ? `No ${filterType}s have been extracted yet. Process some emails to see them here.`
                         : 'No content has been extracted yet. Use the Prism Overview to extract content from your emails.'}

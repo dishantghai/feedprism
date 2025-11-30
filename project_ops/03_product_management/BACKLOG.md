@@ -39,6 +39,9 @@ Frontend metrics panel showing precision@k, latency, extraction counts, and pipe
 
 ## Completed
 
+#### ✅ F-017: Demo Mode for Hackathon (Nov 30, 2025)
+No login required, uses pre-loaded Qdrant data, demo banner, configurable via DEMO_MODE env var.
+
 #### ✅ F-016: Dedicated View Modes (Nov 30, 2025)
 BlogsGallery (grid/list), CoursesCatalog (full-width cards), EventsCalendar (Day/Week/Month/Year views).
 

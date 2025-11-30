@@ -4,6 +4,12 @@ from app.services.recommender import RecommendationService
 from app.services.analytics import AnalyticsService
 from app.routers import feed_router, emails_router, search_router, metrics_router
 from app.routers.pipeline import router as pipeline_router
+from app.routers.demo import router as demo_router, _demo_mode_enabled
+from app.config import settings
+
+# Log demo mode status on startup
+print(f"🎯 Demo Mode: {'ENABLED' if _demo_mode_enabled else 'DISABLED'}")
+print(f"   (from .env: {settings.demo_mode}, runtime: {_demo_mode_enabled})")
 
 app = FastAPI(
     title="FeedPrism API",
@@ -19,6 +25,7 @@ app.add_middleware(
         "http://localhost:3000",  # Alternative dev port
         "http://127.0.0.1:5173",
         "http://127.0.0.1:3000",
+        "*",  # Allow all origins for hackathon demo (production: restrict this)
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -31,6 +38,7 @@ app.include_router(emails_router)
 app.include_router(search_router)
 app.include_router(metrics_router)
 app.include_router(pipeline_router)
+app.include_router(demo_router)
 
 # Initialize services
 # We initialize them here to be reused across requests
@@ -39,7 +47,13 @@ analytics = AnalyticsService()
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to FeedPrism API", "docs": "/docs"}
+    # Import here to get current runtime state
+    from app.routers.demo import _demo_mode_enabled as current_demo_mode
+    return {
+        "message": "Welcome to FeedPrism API",
+        "docs": "/docs",
+        "demo_mode": current_demo_mode
+    }
 
 @app.get("/api/recommendations/{item_id}")
 async def get_recommendations(item_id: str, content_type: str, limit: int = 5):

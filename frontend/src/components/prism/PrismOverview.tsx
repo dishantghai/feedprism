@@ -16,6 +16,7 @@ import { RawFeedPanel } from './RawFeedPanel';
 import { PrismVisual } from './PrismVisual';
 import { ExtractionPanel, type ExtractionState } from './ExtractionPanel';
 import { api, type ExtractionEvent, type UnprocessedEmailsResponse } from '../../services/api';
+import { useDemo } from '../../contexts';
 
 interface PrismOverviewProps {
     defaultExpanded?: boolean;
@@ -39,10 +40,18 @@ interface ExtractionResult {
 }
 
 export function PrismOverview({ defaultExpanded = true }: PrismOverviewProps) {
+    const { isDemo, isLoading: isDemoLoading, setDemoExtracted } = useDemo();
+
     const [isExpanded, setIsExpanded] = useState(() => {
         const saved = localStorage.getItem('feedprism-prism-expanded');
         return saved !== null ? saved === 'true' : defaultExpanded;
     });
+
+    // Demo mode simulation state
+    const [demoSimulating, setDemoSimulating] = useState(false);
+    const [demoProgress, setDemoProgress] = useState<ExtractionProgress | null>(null);
+    const [demoResult, setDemoResult] = useState<ExtractionResult | null>(null);
+    const [demoExtractionState, setDemoExtractionState] = useState<ExtractionState>('ready');
 
     // Email state
     const [unprocessedData, setUnprocessedData] = useState<UnprocessedEmailsResponse | null>(null);
@@ -144,8 +153,56 @@ export function PrismOverview({ defaultExpanded = true }: PrismOverviewProps) {
         }
     }, []);
 
+    // Fetch demo emails from API
+    const fetchDemoEmails = useCallback(async () => {
+        try {
+            // Reset demo state first to get fresh emails
+            await api.resetDemoState();
+
+            // Then fetch unprocessed demo emails
+            const response = await api.getDemoUnprocessedEmails();
+
+            // Convert to same format as real emails
+            setUnprocessedData({
+                emails: response.emails.map(e => ({
+                    id: e.id,
+                    subject: e.subject,
+                    sender: e.sender,
+                    sender_email: e.sender_email,
+                    received_at: e.received_at,
+                    snippet: e.snippet
+                })),
+                unprocessed_count: response.unprocessed_count,
+                total_fetched: response.total_demo_emails,
+                processed_count: response.total_demo_emails - response.unprocessed_count,
+                hours_back: response.hours_back
+            });
+
+            if (response.unprocessed_count === 0) {
+                setDemoExtractionState('empty');
+            } else {
+                setDemoExtractionState('ready');
+            }
+        } catch (err) {
+            console.error('Failed to fetch demo emails:', err);
+            // Fall back to hardcoded demo emails
+        }
+    }, []);
+
     // On mount: check if extraction is already running, then fetch emails
     useEffect(() => {
+        // Wait for demo context to finish loading
+        if (isDemoLoading) {
+            return;
+        }
+
+        if (isDemo) {
+            // Demo mode: fetch demo emails from API (with reset)
+            setLoading(true);
+            fetchDemoEmails().finally(() => setLoading(false));
+            return;
+        }
+
         const init = async () => {
             const isExtracting = await checkExtractionStatus();
             if (isExtracting) {
@@ -161,7 +218,7 @@ export function PrismOverview({ defaultExpanded = true }: PrismOverviewProps) {
         // Cleanup polling on unmount
         return () => stopPolling();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [isDemo, isDemoLoading]);
 
     // Persist collapse state
     useEffect(() => {
@@ -234,6 +291,65 @@ export function PrismOverview({ defaultExpanded = true }: PrismOverviewProps) {
         setAbortExtraction(() => abort);
     }, [unprocessedData]);
 
+    // Demo mode: Simulate extraction with pre-loaded data
+    const handleDemoExtract = useCallback(() => {
+        if (demoSimulating) return;
+
+        setDemoSimulating(true);
+        setDemoExtractionState('extracting');
+
+        // Simulated extraction steps
+        const steps = [
+            { message: 'Fetching sample newsletters...', events: 0, courses: 0, blogs: 0 },
+            { message: 'Parsing "Last Week in AI"...', events: 1, courses: 0, blogs: 2 },
+            { message: 'Extracting from "Coursera Weekly"...', events: 1, courses: 3, blogs: 2 },
+            { message: 'Processing "Tech Events Digest"...', events: 4, courses: 3, blogs: 2 },
+            { message: 'Analyzing "Dev Newsletter"...', events: 4, courses: 5, blogs: 5 },
+            { message: 'Finalizing extraction...', events: 5, courses: 6, blogs: 7 },
+        ];
+
+        let stepIndex = 0;
+        const totalSteps = steps.length;
+
+        const interval = setInterval(() => {
+            if (stepIndex < totalSteps) {
+                const step = steps[stepIndex];
+                setDemoProgress({
+                    current: stepIndex + 1,
+                    total: totalSteps,
+                    message: step.message,
+                    events: step.events,
+                    courses: step.courses,
+                    blogs: step.blogs,
+                });
+                stepIndex++;
+            } else {
+                clearInterval(interval);
+                setDemoResult({
+                    events: 5,
+                    courses: 6,
+                    blogs: 7,
+                    emailsProcessed: 6,
+                    errors: 0,
+                });
+                setDemoExtractionState('complete');
+                setDemoSimulating(false);
+                // Mark demo extraction as complete - this will trigger feed to show items
+                setDemoExtracted(true);
+            }
+        }, 800); // 800ms per step for realistic feel
+
+        return () => clearInterval(interval);
+    }, [demoSimulating, setDemoExtracted]);
+
+    // Reset demo extraction
+    const resetDemoExtraction = useCallback(() => {
+        setDemoExtractionState('ready');
+        setDemoProgress(null);
+        setDemoResult(null);
+        setDemoSimulating(false);
+    }, []);
+
     // Convert unprocessed emails to EmailSummary format for RawFeedPanel
     const emails = unprocessedData?.emails.map((e) => ({
         id: e.id,
@@ -245,9 +361,20 @@ export function PrismOverview({ defaultExpanded = true }: PrismOverviewProps) {
         extracted_count: 0, // These are unprocessed
     })) || [];
 
-    const totalExtracted = result
-        ? result.events + result.courses + result.blogs
+    // Use demo state or real state based on mode
+    const activeExtractionState = isDemo ? demoExtractionState : extractionState;
+    const activeProgress = isDemo ? demoProgress : progress;
+    const activeResult = isDemo ? demoResult : result;
+    const activeOnExtract = isDemo ? handleDemoExtract : handleExtract;
+
+    const totalExtracted = activeResult
+        ? activeResult.events + activeResult.courses + activeResult.blogs
         : 0;
+
+    // In demo mode, use emails from API (fetched via fetchDemoEmails)
+    // In normal mode, use emails from unprocessedData
+    const displayEmails = emails;
+    const displayCount = unprocessedData?.unprocessed_count || 0;
 
     return (
         <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border-light)] overflow-hidden">
@@ -263,9 +390,9 @@ export function PrismOverview({ defaultExpanded = true }: PrismOverviewProps) {
                     <span className="text-sm font-medium text-[var(--color-text-primary)]">
                         Prism Overview
                     </span>
-                    {!isExpanded && unprocessedData && (
+                    {!isExpanded && (
                         <span className="text-xs text-[var(--color-text-tertiary)] ml-2">
-                            {unprocessedData.unprocessed_count} unprocessed emails
+                            {displayCount} unprocessed emails
                         </span>
                     )}
                     {isExpanded ? (
@@ -275,15 +402,26 @@ export function PrismOverview({ defaultExpanded = true }: PrismOverviewProps) {
                     )}
                 </button>
 
-                {/* Refresh button */}
-                <button
-                    onClick={() => fetchUnprocessedEmails(true)}
-                    disabled={loading || extractionState === 'extracting'}
-                    className="p-1.5 rounded-md hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] transition-colors disabled:opacity-50"
-                    title="Refresh emails"
-                >
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                </button>
+                <div className="flex items-center gap-2">
+                    {/* Reset/Refresh button */}
+                    <button
+                        onClick={() => {
+                            if (isDemo) {
+                                // Reset demo state and refetch
+                                resetDemoExtraction();
+                                setLoading(true);
+                                fetchDemoEmails().finally(() => setLoading(false));
+                            } else {
+                                fetchUnprocessedEmails(true);
+                            }
+                        }}
+                        disabled={loading || (isDemo ? demoSimulating : extractionState === 'extracting')}
+                        className="p-1.5 rounded-md hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] transition-colors disabled:opacity-50"
+                        title={isDemo ? "Reset demo & refresh" : "Refresh emails"}
+                    >
+                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                </div>
             </div>
 
             {/* Expandable content */}
@@ -293,29 +431,29 @@ export function PrismOverview({ defaultExpanded = true }: PrismOverviewProps) {
             >
                 <div className="px-4 pb-4 pt-2">
                     {/* Three-column layout */}
-                    <div className="grid grid-cols-1 md:grid-cols-[2fr_auto_1fr] gap-4 items-stretch" style={{ height: '340px' }}>
-                        {/* Left: Unprocessed emails - scrollable */}
-                        <div className="min-w-0 overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-stretch h-[320px]">
+                        {/* Left: Emails - scrollable */}
+                        <div className="min-w-0 overflow-y-auto pr-2 custom-scrollbar h-full">
                             <RawFeedPanel
-                                emails={emails}
+                                emails={displayEmails}
                                 loading={loading}
                                 title={`Unprocessed (${unprocessedData?.hours_back || 8}h)`}
                             />
                         </div>
 
                         {/* Center: Prism visual */}
-                        <div className="hidden md:flex items-center justify-center w-[280px]">
+                        <div className="hidden md:flex items-center justify-center w-[240px] flex-shrink-0">
                             <PrismVisual totalProcessed={totalExtracted} />
                         </div>
 
                         {/* Right: Extraction panel */}
-                        <div className="min-w-0 bg-[var(--color-bg-tertiary)] rounded-lg">
+                        <div className="min-w-0 bg-[var(--color-bg-tertiary)] rounded-lg h-full flex items-center justify-center">
                             <ExtractionPanel
-                                state={extractionState}
-                                unprocessedCount={unprocessedData?.unprocessed_count || 0}
-                                onExtract={handleExtract}
-                                progress={progress || undefined}
-                                result={result || undefined}
+                                state={activeExtractionState}
+                                unprocessedCount={displayCount}
+                                onExtract={activeOnExtract}
+                                progress={activeProgress || undefined}
+                                result={activeResult || undefined}
                                 error={error || undefined}
                             />
                         </div>

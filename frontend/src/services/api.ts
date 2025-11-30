@@ -417,6 +417,108 @@ export function startReExtraction(
 }
 
 // =============================================================================
+// Demo Mode API
+// =============================================================================
+
+export interface DemoStatus {
+    enabled: boolean;
+    user_name: string | null;
+    user_email: string | null;
+    message: string;
+}
+
+export interface DemoUser {
+    id: string;
+    name: string;
+    email: string;
+    picture: string;
+    is_demo: boolean;
+}
+
+export interface DemoConfig {
+    demo_mode: boolean;
+    features: {
+        login_required: boolean;
+        email_sync_enabled: boolean;
+        data_source: 'pre-loaded' | 'gmail';
+    };
+    user: {
+        name: string | null;
+        email: string | null;
+    };
+    banner: {
+        show: boolean;
+        text: string;
+        type: 'info' | 'warning';
+    };
+}
+
+export async function getDemoStatus(): Promise<DemoStatus> {
+    return fetchJson<DemoStatus>(`${API_BASE}/demo/status`);
+}
+
+export async function getDemoUser(): Promise<DemoUser> {
+    return fetchJson<DemoUser>(`${API_BASE}/demo/user`);
+}
+
+export async function getDemoConfig(): Promise<DemoConfig> {
+    return fetchJson<DemoConfig>(`${API_BASE}/demo/config`);
+}
+
+export async function toggleDemoMode(enabled: boolean): Promise<DemoStatus> {
+    return fetchJson<DemoStatus>(`${API_BASE}/demo/toggle`, {
+        method: 'POST',
+        body: JSON.stringify({ enabled }),
+    });
+}
+
+export interface DemoResetResponse {
+    success: boolean;
+    emails_reset: number;
+    items_deleted: number;
+    demo_emails_available: number;
+}
+
+export async function resetDemoState(): Promise<DemoResetResponse> {
+    return fetchJson<DemoResetResponse>(`${API_BASE}/demo/reset`, {
+        method: 'POST',
+    });
+}
+
+export interface DemoEmailsResponse {
+    emails: Array<{
+        id: string;
+        subject: string;
+        sender: string;
+        sender_email: string;
+        snippet: string;
+        received_at: string;
+    }>;
+    unprocessed_count: number;
+    total_demo_emails: number;
+    hours_back: number;
+}
+
+export async function getDemoUnprocessedEmails(): Promise<DemoEmailsResponse> {
+    return fetchJson<DemoEmailsResponse>(`${API_BASE}/demo/emails/unprocessed`);
+}
+
+export async function getDemoFeed(
+    page: number = 1,
+    pageSize: number = 20,
+    types?: string[]
+): Promise<FeedResponse> {
+    const params = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+    });
+    if (types && types.length > 0) {
+        params.append('types', types.join(','));
+    }
+    return fetchJson<FeedResponse>(`${API_BASE}/demo/feed?${params}`);
+}
+
+// =============================================================================
 // Export all as api object for convenience
 // =============================================================================
 
@@ -447,6 +549,15 @@ export const api = {
     startExtraction,
     getProcessedEmails,
     startReExtraction,
+
+    // Demo Mode
+    getDemoStatus,
+    getDemoUser,
+    getDemoConfig,
+    toggleDemoMode,
+    resetDemoState,
+    getDemoUnprocessedEmails,
+    getDemoFeed,
 };
 
 export default api;

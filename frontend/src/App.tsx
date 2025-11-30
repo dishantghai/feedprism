@@ -5,6 +5,9 @@ import { FeedList } from './components/feed';
 import { CommandPalette } from './components/search';
 import { MetricsDashboard } from './components/Metrics';
 import { BlogsGallery, CoursesCatalog, EventsCalendar } from './components/views';
+import { DemoBanner } from './components/demo';
+import { SettingsView } from './components/settings';
+import { DemoProvider, useDemo } from './contexts';
 import { useCommandK } from './hooks';
 import { api } from './services/api';
 import type { MetricsResponse, ViewType, FeedItem } from './types';
@@ -21,7 +24,8 @@ const VIEW_CONFIG: Record<ViewType, { title: string; subtitle: string }> = {
   settings: { title: 'Settings', subtitle: 'Configure FeedPrism' },
 };
 
-function App() {
+function AppContent() {
+  const { isDemo } = useDemo();
   const [activeView, setActiveView] = useState<ViewType>('home');
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,26 +77,32 @@ function App() {
 
   return (
     <>
-      <Layout
-        activeView={activeView}
-        onViewChange={setActiveView}
-        onOpenCommandPalette={openCommandPalette}
-        title={viewConfig.title}
-        subtitle={viewConfig.subtitle}
-        counts={counts}
-      >
-        {/* Content based on active view */}
-        {activeView === 'home' && (
-          <HomeView loading={loading} error={error} />
-        )}
-        {activeView === 'events' && <EventsCalendar />}
-        {activeView === 'courses' && <CoursesCatalog />}
-        {activeView === 'blogs' && <BlogsGallery />}
-        {activeView === 'actions' && <PlaceholderView type="actions" />}
-        {activeView === 'metrics' && <MetricsDashboard />}
-        {activeView === 'inbox' && <PlaceholderView type="inbox" />}
-        {activeView === 'settings' && <PlaceholderView type="settings" />}
-      </Layout>
+      {/* Demo Mode Banner */}
+      <DemoBanner />
+
+      {/* Add top padding when demo banner is shown */}
+      <div style={{ paddingTop: isDemo ? '40px' : '0' }}>
+        <Layout
+          activeView={activeView}
+          onViewChange={setActiveView}
+          onOpenCommandPalette={openCommandPalette}
+          title={viewConfig.title}
+          subtitle={viewConfig.subtitle}
+          counts={counts}
+        >
+          {/* Content based on active view */}
+          {activeView === 'home' && (
+            <HomeView loading={loading} error={error} />
+          )}
+          {activeView === 'events' && <EventsCalendar />}
+          {activeView === 'courses' && <CoursesCatalog />}
+          {activeView === 'blogs' && <BlogsGallery />}
+          {activeView === 'actions' && <PlaceholderView type="actions" />}
+          {activeView === 'metrics' && <MetricsDashboard />}
+          {activeView === 'inbox' && <PlaceholderView type="inbox" />}
+          {activeView === 'settings' && <SettingsView />}
+        </Layout>
+      </div>
 
       {/* Command Palette */}
       <CommandPalette
@@ -102,6 +112,14 @@ function App() {
         onSelectItem={handleSelectItem}
       />
     </>
+  );
+}
+
+function App() {
+  return (
+    <DemoProvider>
+      <AppContent />
+    </DemoProvider>
   );
 }
 

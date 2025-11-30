@@ -1,6 +1,6 @@
 # FeedPrism Project Status
 
-**Last Updated:** Nov 30, 2025
+**Last Updated:** Nov 30, 2025 (8:55 PM IST)
 
 ---
 
@@ -28,8 +28,8 @@
 | Phase 3: Prism Overview | ✅ Complete | Demo mode with live extraction pipeline (SSE) |
 | Phase 4: Command & Filters | ✅ Complete | ⌘K command palette, filter bar, keyboard nav |
 | Phase 5: Feed Cards | ✅ Complete | FeedCard, ExtractedItemCard with rich data |
-| Phase 6: Metrics Panel | 🔲 Not Started | Dashboard view with metrics |
-| Phase 7: Polish | 🔲 Not Started | Animations, loading states, final touches |
+| Phase 6: Metrics Panel | ✅ Complete | Dashboard view with metrics (F-001) |
+| Phase 7: Polish | ✅ Complete | Animations, loading states, demo mode, UI fixes |
 
 ### Submission & Post-Hackathon
 
@@ -42,12 +42,14 @@
 
 ## Next Priority
 
-**Product backlog is now active.** See `03_product_management/BACKLOG.md`
+**🎉 All frontend phases complete!** Ready for hackathon submission.
 
-**Current P1 Items:**
-- F-001: Metrics Dashboard Panel
+**Current Focus:**
+- Hackathon submission (README, demo video, deployment)
+- Final testing of demo mode flow
 
-**Workflow:** `03_product_management/WORKFLOW.md` explains the minimal AI-assisted spec-driven process.
+**Product backlog:** See `03_product_management/BACKLOG.md`
+**Workflow:** `03_product_management/WORKFLOW.md`
 
 ---
 
@@ -70,24 +72,61 @@
 
 ### Backend
 - `feedprism_main/app/main.py` - FastAPI app entry
-- `feedprism_main/app/routers/` - API endpoints (feed, pipeline, search, metrics)
-- `feedprism_main/app/services/` - Business logic (gmail_client, extractor, embedder)
+- `feedprism_main/app/routers/` - API endpoints (feed, pipeline, search, metrics, demo)
+- `feedprism_main/app/routers/demo.py` - Demo mode API (toggle, config, feed, emails)
+- `feedprism_main/app/services/` - Business logic (gmail_client, extractor, embedder, demo_service)
+- `feedprism_main/app/services/demo_service.py` - Demo data management
 - `feedprism_main/app/database/qdrant_client.py` - Vector DB operations
+- `feedprism_main/data/demo_state.json` - Persisted demo mode state
 
 ### Frontend
-- `frontend/src/App.tsx` - Main app with routing
+- `frontend/src/App.tsx` - Main app with routing, DemoProvider
 - `frontend/src/components/layout/Sidebar.tsx` - Navigation
 - `frontend/src/components/prism/` - Extraction demo components
 - `frontend/src/components/feed/` - Feed cards (FeedCard, ExtractedItemCard, FeedList)
 - `frontend/src/components/search/` - CommandPalette, FilterBar
+- `frontend/src/components/demo/` - DemoBanner
+- `frontend/src/components/settings/` - SettingsView with demo toggle
+- `frontend/src/contexts/DemoContext.tsx` - Demo mode context
 - `frontend/src/hooks/` - useKeyboard, useCommandK
-- `frontend/src/services/api.ts` - Backend API client
+- `frontend/src/services/api.ts` - Backend API client (includes demo APIs)
 
 ---
 
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-017: Demo Mode for Hackathon (Enhanced)**
+  - **Core Features:**
+    - No login required when `DEMO_MODE=true`
+    - Demo banner (fixed, centered) shows "Demo Mode - Exploring pre-loaded newsletter data"
+  - **Runtime Toggle:**
+    - Toggle demo mode from Settings UI without server restart
+    - State persists via file-based storage (`data/demo_state.json`)
+  - **Pre-defined Demo Data:**
+    - 6 sample newsletters (Last Week in AI, Coursera, Eventbrite, etc.)
+    - 18 demo feed items (5 events, 6 courses, 7 blogs)
+    - Items spread across different source emails for realistic grouping
+  - **Complete Extraction Flow:**
+    - Demo emails load in Prism Overview
+    - Simulated extraction with animated progress
+    - Extracted items appear in feed after completion
+    - `demoExtracted` state tracked in sessionStorage
+  - **Backend Endpoints:**
+    - `/api/demo/status`, `/api/demo/config`, `/api/demo/user`
+    - `/api/demo/toggle` - runtime toggle
+    - `/api/demo/reset` - reset demo state
+    - `/api/demo/emails/unprocessed` - demo emails for extraction
+    - `/api/demo/feed` - pre-defined feed items
+  - **Frontend Components:**
+    - DemoContext with toggle, loading states, extraction tracking
+    - DemoBanner (fixed position, centered)
+    - SettingsView with demo mode toggle
+  - **UI Fixes:**
+    - Banner alignment (fixed top, centered content)
+    - Removed redundant "Demo" text from UI
+    - Empty state alignment in feed
+    - Proper padding when banner is shown
 - ✅ **F-016: Dedicated View Modes**
   - **BlogsGallery**: Grid/List toggle, rich preview cards with images, reading time, tags, source links
   - **CoursesCatalog**: Full-width cards, provider branding, level filters, instructor/duration/cost

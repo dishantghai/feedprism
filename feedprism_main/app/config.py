@@ -124,13 +124,27 @@ class Settings(BaseSettings):
         description="Hours back to fetch emails for processing (default: 8 hours)"
     )
     
+    # Demo Mode Configuration
+    demo_mode: bool = Field(
+        default=False,
+        description="Enable demo mode - uses pre-loaded data, no login required"
+    )
+    demo_user_name: str = Field(
+        default="Demo User",
+        description="Display name for demo mode user"
+    )
+    demo_user_email: str = Field(
+        default="demo@feedprism.app",
+        description="Email for demo mode user"
+    )
+    
     # Pydantic Settings Configuration
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         frozen=True,  # Immutable settings
-        extra="forbid"  # Reject unknown environment variables
+        extra="ignore"  # Ignore unknown environment variables (for demo mode flexibility)
     )
     
     @field_validator('gmail_credentials_path', 'gmail_token_path')
