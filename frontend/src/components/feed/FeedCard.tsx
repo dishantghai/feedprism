@@ -26,9 +26,11 @@ interface FeedCardProps {
     emailGroup: EmailGroup;
     onItemClick?: (item: FeedItem) => void;
     onEmailClick?: (emailGroup: EmailGroup) => void;
+    savedTags?: string[];
+    onSaveTag?: (tag: string) => void;
 }
 
-export function FeedCard({ emailGroup, onItemClick, onEmailClick }: FeedCardProps) {
+export function FeedCard({ emailGroup, onItemClick, onEmailClick, savedTags = [], onSaveTag }: FeedCardProps) {
     const { email_id, email_subject, sender, received_at, items } = emailGroup;
     const [showAll, setShowAll] = useState(false);
     const [showEmailModal, setShowEmailModal] = useState(false);
@@ -104,6 +106,8 @@ export function FeedCard({ emailGroup, onItemClick, onEmailClick }: FeedCardProp
                         onClick={() => onItemClick?.(item)}
                         compact={item.item_type !== 'blog'}
                         showEmailAttribution={false}
+                        savedTags={savedTags}
+                        onSaveTag={onSaveTag}
                     />
                 ))}
 

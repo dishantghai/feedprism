@@ -9,6 +9,7 @@ import { Inbox, RefreshCw, AlertCircle } from 'lucide-react';
 import { FeedCard, type EmailGroup } from './FeedCard';
 import { DetailModal } from './DetailModal';
 import { FilterBar, type FilterState, type StatusFilter, type SortOption } from '../search';
+import { QuickTagBar } from '../tags';
 import { FeedCardSkeleton } from '../ui';
 import { api } from '../../services/api';
 import type { FeedItem, ItemType } from '../../types';
@@ -44,7 +45,45 @@ export function FeedList({
         status: 'any' as StatusFilter,
         sort: 'recent' as SortOption,
         senders: [],
+        tags: [],
     });
+
+    // Saved tags (persisted to localStorage)
+    const [savedTags, setSavedTags] = useState<string[]>(() => {
+        try {
+            const stored = localStorage.getItem('feedprism_saved_tags');
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    // Persist saved tags
+    useEffect(() => {
+        localStorage.setItem('feedprism_saved_tags', JSON.stringify(savedTags));
+    }, [savedTags]);
+
+    // Toggle save tag (from content cards)
+    const toggleSaveTag = useCallback((tag: string) => {
+        setSavedTags(prev =>
+            prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+        );
+    }, []);
+
+    // Toggle tag filter (from QuickTagBar)
+    const toggleTagFilter = useCallback((tag: string) => {
+        setFilters(prev => ({
+            ...prev,
+            tags: prev.tags.includes(tag)
+                ? prev.tags.filter(t => t !== tag)
+                : [...prev.tags, tag]
+        }));
+    }, []);
+
+    // Clear tag filters
+    const clearTagFilters = useCallback(() => {
+        setFilters(prev => ({ ...prev, tags: [] }));
+    }, []);
 
     // Modal state
     const [selectedItem, setSelectedItem] = useState<FeedItem | null>(null);
@@ -64,12 +103,13 @@ export function FeedList({
             if (filterType) {
                 response = await api.getFeedByType(filterType, 1, limit);
             } else {
-                // Use sender filter if set
+                // Use sender and tag filters if set
                 response = await api.getFeed(
                     1,
                     limit,
                     filters.types.length > 0 ? filters.types : undefined,
-                    filters.senders.length > 0 ? filters.senders : undefined
+                    filters.senders.length > 0 ? filters.senders : undefined,
+                    filters.tags.length > 0 ? filters.tags : undefined
                 );
             }
             console.log('Feed response:', response);
@@ -81,11 +121,52 @@ export function FeedList({
             setLoading(false);
             setRefreshing(false);
         }
-    }, [filterType, limit, filters.types, filters.senders]);
+    }, [filterType, limit, filters.types, filters.senders, filters.tags]);
 
     useEffect(() => {
         fetchFeed();
     }, [fetchFeed]);
+
+    // Get all unique tags from items with counts (sorted by frequency)
+    const allTagsWithCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        items.forEach(item => {
+            item.tags?.forEach(tag => {
+                counts[tag] = (counts[tag] || 0) + 1;
+            });
+        });
+        return Object.entries(counts)
+            .map(([tag, count]) => ({ tag, count }))
+            .sort((a, b) => b.count - a.count);
+    }, [items]);
+
+    // Combine saved tags with frequent tags for the QuickTagBar
+    // Saved tags come first, then fill with frequent tags
+    const tagsForQuickBar = useMemo(() => {
+        const counts: Record<string, number> = {};
+        items.forEach(item => {
+            item.tags?.forEach(tag => {
+                counts[tag] = (counts[tag] || 0) + 1;
+            });
+        });
+
+        // Start with saved tags (with their counts)
+        const result: Array<{ tag: string; count: number }> = savedTags.map(tag => ({
+            tag,
+            count: counts[tag] || 0
+        }));
+
+        // Add frequent tags that aren't already saved (up to 10 total)
+        const savedSet = new Set(savedTags);
+        for (const { tag, count } of allTagsWithCounts) {
+            if (result.length >= 10) break;
+            if (!savedSet.has(tag)) {
+                result.push({ tag, count });
+            }
+        }
+
+        return result;
+    }, [items, savedTags, allTagsWithCounts]);
 
     // Apply filters to items
     const filteredItems = useMemo(() => {
@@ -251,6 +332,18 @@ export function FeedList({
                 />
             )}
 
+            {/* Quick Tag Bar - show saved tags first, then frequent tags */}
+            {tagsForQuickBar.length > 0 && (
+                <QuickTagBar
+                    savedTags={tagsForQuickBar}
+                    selectedTags={filters.tags}
+                    userSavedTags={savedTags}
+                    onToggleTag={toggleTagFilter}
+                    onRemoveTag={toggleSaveTag}
+                    onClearAll={clearTagFilters}
+                />
+            )}
+
             {/* Feed cards */}
             <div className="space-y-4 stagger-children">
                 {emailGroups.map((group) => (
@@ -259,6 +352,8 @@ export function FeedList({
                         emailGroup={group}
                         onItemClick={handleItemClick}
                         onEmailClick={handleEmailClick}
+                        savedTags={savedTags}
+                        onSaveTag={toggleSaveTag}
                     />
                 ))}
             </div>

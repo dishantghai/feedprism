@@ -88,6 +88,13 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-013: Saved Tags & Tag-Based Filtering**
+  - Frontend: ClickableTag component on content cards (click to save)
+  - Frontend: QuickTagBar shows saved tags first, then frequent tags
+  - Frontend: Saved tags persist to localStorage
+  - Frontend: Remove saved tags via × button in tag bar
+  - Backend: Added `tags` param to `/api/feed` with OR logic
+  - FilterState updated to include tags array
 - ✅ **F-014: Event View Enhancement**
   - Enhanced EventCard with larger date badge (w-24) showing weekday/day/month/time
   - Added description/hook preview (3 lines)

@@ -8,6 +8,10 @@
 
 ### Features
 
+#### F-015: Course View Enhancement
+Priority: P2
+Upgrade Course cards with provider branding, instructor info, level/duration/cost, and Enroll CTA.
+
 #### F-001: Metrics Dashboard Panel
 Priority: P1
 Frontend metrics panel showing precision@k, latency, extraction counts, and pipeline health.
@@ -34,6 +38,9 @@ Frontend metrics panel showing precision@k, latency, extraction counts, and pipe
 ---
 
 ## Completed
+
+#### ✅ F-013: Saved Tags & Tag-Based Filtering (Nov 30, 2025)
+ClickableTag on cards, QuickTagBar with saved/frequent tags, localStorage persistence, remove tags, backend filtering.
 
 #### ✅ F-014: Event View Enhancement (Nov 30, 2025)
 Enhanced EventCard with larger date badge, description, Register/Add to Calendar CTAs, View Source link.

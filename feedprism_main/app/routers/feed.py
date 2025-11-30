@@ -89,15 +89,16 @@ def get_feed(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     types: Optional[str] = Query(None, description="Comma-separated types: event,course,blog"),
-    senders: Optional[str] = Query(None, description="Comma-separated sender emails to filter by")
+    senders: Optional[str] = Query(None, description="Comma-separated sender emails to filter by"),
+    tags: Optional[str] = Query(None, description="Comma-separated tags to filter by")
 ):
     """
     Get paginated feed of all extracted items.
     
     Returns items from all content types, sorted by extraction date.
-    Supports filtering by type and sender.
+    Supports filtering by type, sender, and tags.
     """
-    logger.info(f"Fetching feed: page={page}, page_size={page_size}, types={types}, senders={senders}")
+    logger.info(f"Fetching feed: page={page}, page_size={page_size}, types={types}, senders={senders}, tags={tags}")
     
     # Parse types filter
     type_list = ["events", "courses", "blogs"]
@@ -110,12 +111,18 @@ def get_feed(
     if senders:
         sender_list = [s.strip().lower() for s in senders.split(",") if s.strip()]
     
+    # Parse tags filter
+    tag_list = None
+    if tags:
+        tag_list = [t.strip().lower() for t in tags.split(",") if t.strip()]
+    
     all_items: List[FeedItem] = []
     total_count = 0
     
     # Fetch limited items from each collection (optimized)
     # We fetch more than page_size to allow for sorting across collections
-    fetch_limit = page_size * 3 if sender_list else page_size * 2  # Fetch more if filtering
+    has_filters = sender_list or tag_list
+    fetch_limit = page_size * 3 if has_filters else page_size * 2  # Fetch more if filtering
     
     for content_type in type_list:
         try:
@@ -149,6 +156,12 @@ def get_feed(
                     if sender_email not in sender_list:
                         continue
                 
+                # Apply tag filter if specified (OR logic - item must have at least one matching tag)
+                if tag_list:
+                    item_tags = [t.lower() for t in (point.payload.get("tags") or [])]
+                    if not any(tag in item_tags for tag in tag_list):
+                        continue
+                
                 item = _point_to_feed_item(
                     {"id": point.id, "payload": point.payload},
                     item_type
@@ -159,8 +172,8 @@ def get_feed(
             logger.warning(f"Error fetching from {content_type}: {e}")
             continue
     
-    # Update total count if sender filter was applied
-    if sender_list:
+    # Update total count if filters were applied
+    if sender_list or tag_list:
         total_count = len(all_items)
     
     # Sort by extracted_at (newest first)

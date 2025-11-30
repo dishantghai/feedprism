@@ -1,4 +1,6 @@
-# F-006: Saved Tags & Tag-Based Filtering
+# F-013: Saved Tags & Tag-Based Filtering
+
+**Status:** ✅ Complete (Nov 30, 2025)
 
 ## Problem
 Content items (events, courses, blogs) have many tags extracted from emails. Users cannot easily track tags they care about or quickly filter content by their preferred topics. Tags are visible but not actionable, reducing their utility for personalized content discovery.

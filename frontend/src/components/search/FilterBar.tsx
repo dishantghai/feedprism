@@ -33,6 +33,7 @@ export interface FilterState {
     status: StatusFilter;
     sort: SortOption;
     senders: string[];  // Array of sender emails
+    tags: string[];     // Array of selected tags
 }
 
 interface FilterBarProps {
@@ -296,10 +297,10 @@ export function FilterBar({ filters, onFiltersChange, showTypeFilter = true, cla
     };
 
     const clearFilters = () => {
-        onFiltersChange({ types: [], status: 'any', sort: 'recent', senders: [] });
+        onFiltersChange({ types: [], status: 'any', sort: 'recent', senders: [], tags: [] });
     };
 
-    const hasActiveFilters = filters.types.length > 0 || filters.status !== 'any' || filters.senders.length > 0;
+    const hasActiveFilters = filters.types.length > 0 || filters.status !== 'any' || filters.senders.length > 0 || filters.tags.length > 0;
 
     return (
         <div className={cn('flex items-center gap-2 flex-wrap', className)}>

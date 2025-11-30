@@ -19,9 +19,11 @@ import {
     ArrowRight,
     User,
     Mail,
-    CalendarPlus
+    CalendarPlus,
+    Star
 } from 'lucide-react';
 import { EmailModal } from '../email';
+import { cn } from '../../lib/utils';
 import type { FeedItem } from '../../types';
 
 interface ExtractedItemCardProps {
@@ -29,6 +31,43 @@ interface ExtractedItemCardProps {
     onClick?: () => void;
     compact?: boolean;
     showEmailAttribution?: boolean;
+    savedTags?: string[];
+    onSaveTag?: (tag: string) => void;
+}
+
+// Clickable tag component
+function ClickableTag({
+    tag,
+    isSaved,
+    onSave
+}: {
+    tag: string;
+    isSaved: boolean;
+    onSave?: (tag: string) => void;
+}) {
+    return (
+        <button
+            onClick={(e) => {
+                e.stopPropagation();
+                onSave?.(tag);
+            }}
+            className={cn(
+                'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-all cursor-pointer group/tag',
+                isSaved
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                    : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-tertiary)] hover:bg-blue-50 hover:text-blue-600'
+            )}
+            title={isSaved ? 'Click to unsave tag' : 'Click to save tag'}
+        >
+            {tag}
+            <Star className={cn(
+                'w-2.5 h-2.5 transition-all',
+                isSaved
+                    ? 'fill-blue-500 text-blue-500'
+                    : 'opacity-0 group-hover/tag:opacity-100 text-blue-400'
+            )} />
+        </button>
+    );
 }
 
 // Parse date for event display
@@ -88,28 +127,32 @@ export function ExtractedItemCard({
     item,
     onClick,
     compact = false,
-    showEmailAttribution = true
+    showEmailAttribution = true,
+    savedTags = [],
+    onSaveTag
 }: ExtractedItemCardProps) {
     // Render based on item type
     // Events always get full card treatment (no compact mode) - they need CTAs
     if (item.item_type === 'event') {
-        return <EventCard item={item} onClick={onClick} />;
+        return <EventCard item={item} onClick={onClick} savedTags={savedTags} onSaveTag={onSaveTag} />;
     }
 
     if (item.item_type === 'course') {
-        return <CourseCard item={item} onClick={onClick} compact={compact} showEmailAttribution={showEmailAttribution} />;
+        return <CourseCard item={item} onClick={onClick} compact={compact} showEmailAttribution={showEmailAttribution} savedTags={savedTags} onSaveTag={onSaveTag} />;
     }
 
-    return <BlogCard item={item} onClick={onClick} compact={compact} showEmailAttribution={showEmailAttribution} />;
+    return <BlogCard item={item} onClick={onClick} compact={compact} showEmailAttribution={showEmailAttribution} savedTags={savedTags} onSaveTag={onSaveTag} />;
 }
 
 // =============================================================================
 // Event Card - Calendar-style with date badge
 // =============================================================================
 
-function EventCard({ item, onClick }: {
+function EventCard({ item, onClick, savedTags = [], onSaveTag }: {
     item: FeedItem;
     onClick?: () => void;
+    savedTags?: string[];
+    onSaveTag?: (tag: string) => void;
 }) {
     const [showEmailModal, setShowEmailModal] = useState(false);
     const eventDate = parseEventDate(item.start_time);
@@ -206,6 +249,20 @@ function EventCard({ item, onClick }: {
                             </p>
                         )}
 
+                        {/* Tags - clickable to save */}
+                        {item.tags && item.tags.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                                {item.tags.slice(0, 3).map((tag, index) => (
+                                    <ClickableTag
+                                        key={index}
+                                        tag={tag}
+                                        isSaved={savedTags.includes(tag)}
+                                        onSave={onSaveTag}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
                         {/* Action buttons - compact row */}
                         <div className="flex items-center gap-2 pt-2 border-t border-[var(--color-border-light)]">
                             {item.url && (
@@ -262,11 +319,13 @@ function EventCard({ item, onClick }: {
 // Course Card - Learning-focused with provider highlight
 // =============================================================================
 
-function CourseCard({ item, onClick, compact, showEmailAttribution }: {
+function CourseCard({ item, onClick, compact, showEmailAttribution, savedTags = [], onSaveTag }: {
     item: FeedItem;
     onClick?: () => void;
     compact: boolean;
     showEmailAttribution: boolean;
+    savedTags?: string[];
+    onSaveTag?: (tag: string) => void;
 }) {
 
     if (compact) {
@@ -348,6 +407,20 @@ function CourseCard({ item, onClick, compact, showEmailAttribution }: {
                     {item.certificate_offered && <span>Certificate</span>}
                 </div>
 
+                {/* Tags - clickable to save */}
+                {item.tags && item.tags.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                        {item.tags.slice(0, 3).map((tag, index) => (
+                            <ClickableTag
+                                key={index}
+                                tag={tag}
+                                isSaved={savedTags.includes(tag)}
+                                onSave={onSaveTag}
+                            />
+                        ))}
+                    </div>
+                )}
+
                 {/* Footer */}
                 <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border-light)]">
                     {showEmailAttribution && (
@@ -376,11 +449,13 @@ function CourseCard({ item, onClick, compact, showEmailAttribution }: {
 // Blog Card - Article preview with prominent image and rich excerpt
 // =============================================================================
 
-function BlogCard({ item, onClick, compact, showEmailAttribution }: {
+function BlogCard({ item, onClick, compact, showEmailAttribution, savedTags = [], onSaveTag }: {
     item: FeedItem;
     onClick?: () => void;
     compact: boolean;
     showEmailAttribution: boolean;
+    savedTags?: string[];
+    onSaveTag?: (tag: string) => void;
 }) {
     const domain = extractDomain(item.url);
     // Hook and description are now displayed separately for better engagement
@@ -519,29 +594,21 @@ function BlogCard({ item, onClick, compact, showEmailAttribution }: {
                     </ul>
                 )}
 
-                {/* Tags - only show if no image (category shown on image) */}
-                {!item.image_url && (
+                {/* Tags - clickable to save */}
+                {item.tags && item.tags.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2 mb-4">
-                        {item.category && (
+                        {!item.image_url && item.category && (
                             <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]">
                                 {item.category}
                             </span>
                         )}
-                        {item.tags && item.tags.slice(0, 3).map((tag, index) => (
-                            <span key={index} className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-tertiary)]">
-                                {tag}
-                            </span>
-                        ))}
-                    </div>
-                )}
-
-                {/* Tags when image exists - show below content */}
-                {item.image_url && item.tags && item.tags.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 mb-4">
-                        {item.tags.slice(0, 3).map((tag, index) => (
-                            <span key={index} className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-tertiary)]">
-                                {tag}
-                            </span>
+                        {item.tags.slice(0, 4).map((tag, index) => (
+                            <ClickableTag
+                                key={index}
+                                tag={tag}
+                                isSaved={savedTags.includes(tag)}
+                                onSave={onSaveTag}
+                            />
                         ))}
                     </div>
                 )}

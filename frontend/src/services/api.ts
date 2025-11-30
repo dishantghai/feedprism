@@ -59,7 +59,8 @@ export async function getFeed(
     page = 1,
     pageSize = 20,
     types?: ItemType[],
-    senders?: string[]
+    senders?: string[],
+    tags?: string[]
 ): Promise<FeedResponse> {
     const params = new URLSearchParams({
         page: String(page),
@@ -72,6 +73,10 @@ export async function getFeed(
 
     if (senders && senders.length > 0) {
         params.set('senders', senders.join(','));
+    }
+
+    if (tags && tags.length > 0) {
+        params.set('tags', tags.join(','));
     }
 
     return fetchJson<FeedResponse>(`${API_BASE}/feed?${params}`);
