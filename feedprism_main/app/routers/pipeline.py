@@ -35,8 +35,11 @@ _embedder = None
 
 # Lock to prevent concurrent Gmail API calls (causes SSL issues)
 import threading
+import time
 _gmail_lock = threading.Lock()
 _fetch_in_progress = False
+_fetch_started_at: float = 0  # Timestamp when fetch started
+_FETCH_TIMEOUT_SECONDS = 120  # Auto-reset after 2 minutes
 
 
 def get_gmail() -> GmailClient:
@@ -84,6 +87,20 @@ def _parse_sender(from_header: str) -> tuple:
     return from_header, from_header
 
 
+@router.post("/reset-fetch-lock")
+def reset_fetch_lock():
+    """
+    Manually reset the fetch lock if it gets stuck.
+    Use this if you're getting 429 errors after a server crash.
+    """
+    global _fetch_in_progress, _fetch_started_at
+    was_locked = _fetch_in_progress
+    _fetch_in_progress = False
+    _fetch_started_at = 0
+    logger.info(f"Fetch lock manually reset (was_locked={was_locked})")
+    return {"status": "ok", "was_locked": was_locked}
+
+
 @router.get("/unprocessed-emails")
 def get_unprocessed_emails(
     hours_back: int = Query(None, description="Hours back to fetch (uses settings default if not provided)")
@@ -93,7 +110,14 @@ def get_unprocessed_emails(
     
     Compares Gmail emails against Qdrant to find unprocessed ones.
     """
-    global _fetch_in_progress
+    global _fetch_in_progress, _fetch_started_at
+    
+    # Auto-reset stale lock (e.g., after server restart or crash)
+    if _fetch_in_progress and _fetch_started_at > 0:
+        elapsed = time.time() - _fetch_started_at
+        if elapsed > _FETCH_TIMEOUT_SECONDS:
+            logger.warning(f"Resetting stale fetch lock (was stuck for {elapsed:.0f}s)")
+            _fetch_in_progress = False
     
     # Prevent concurrent fetches (causes SSL issues)
     if _fetch_in_progress:
@@ -105,6 +129,7 @@ def get_unprocessed_emails(
     
     try:
         _fetch_in_progress = True
+        _fetch_started_at = time.time()
         
         gmail = get_gmail()
         qdrant = get_qdrant()

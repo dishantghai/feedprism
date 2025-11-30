@@ -326,7 +326,24 @@ def _point_to_feed_item(point, item_type: str) -> FeedItem:
     - `emails = []`
   - Avoids 500s in the "no matching emails" case.
 
-Overall, these changes make the Phase 5 pipeline demo much more robust against flaky networks, SSL hiccups, and users clicking "Refresh" multiple times.
+- **Auto-reset stale fetch lock** (added Nov 30):
+  - Problem: If server crashes during fetch, `_fetch_in_progress` stays `True` forever, causing 429 errors.
+  - Solution: Track `_fetch_started_at` timestamp and auto-reset if lock held > 2 minutes.
+  - Added `POST /api/pipeline/reset-fetch-lock` endpoint for manual reset.
+  - Code changes in `app/routers/pipeline.py`:
+    ```python
+    _fetch_started_at: float = 0
+    _FETCH_TIMEOUT_SECONDS = 120
+    
+    # At start of get_unprocessed_emails:
+    if _fetch_in_progress and _fetch_started_at > 0:
+        elapsed = time.time() - _fetch_started_at
+        if elapsed > _FETCH_TIMEOUT_SECONDS:
+            logger.warning(f"Resetting stale fetch lock")
+            _fetch_in_progress = False
+    ```
+
+Overall, these changes make the Phase 5 pipeline demo much more robust against flaky networks, SSL hiccups, server crashes, and users clicking "Refresh" multiple times.
 
 ---
 

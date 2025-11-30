@@ -86,6 +86,12 @@ See: `project_ops/05_implementation/implementation_plan.md` → Phase 6-7 sectio
 
 ## Recent Changes
 
+### Nov 30, 2025
+- ✅ Fix stale fetch lock issue (429 errors after server restart)
+  - Auto-reset lock after 2 minute timeout
+  - Added `/api/pipeline/reset-fetch-lock` endpoint for manual reset
+  - Track fetch start timestamp for timeout detection
+
 ### Nov 29, 2025
 - ✅ Phase 4: Command Bar & Filters implementation
   - CommandPalette with ⌘K shortcut, search, keyboard navigation
@@ -101,6 +107,7 @@ See: `project_ops/05_implementation/implementation_plan.md` → Phase 6-7 sectio
 ## Blockers / Known Issues
 
 - Gmail API SSL errors on concurrent requests → Fixed with `_fetch_in_progress` guard
+- Stale fetch lock after server crash → Fixed with auto-reset timeout (2 min)
 - Feed cards need re-extraction to populate new fields (hook, image_url, etc.)
 
 ---
