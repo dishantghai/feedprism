@@ -39,6 +39,9 @@ Frontend metrics panel showing precision@k, latency, extraction counts, and pipe
 
 ## Completed
 
+#### ✅ F-016: Dedicated View Modes (Nov 30, 2025)
+BlogsGallery (grid/list), CoursesCatalog (full-width cards), EventsCalendar (Day/Week/Month/Year views).
+
 #### ✅ F-001: Metrics Dashboard & System Health (Nov 30, 2025)
 Full dashboard with quality metrics, trend charts (Recharts), ingestion stats, health panel, auto-refresh.
 

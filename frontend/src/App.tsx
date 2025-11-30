@@ -4,6 +4,7 @@ import { PrismOverview } from './components/prism';
 import { FeedList } from './components/feed';
 import { CommandPalette } from './components/search';
 import { MetricsDashboard } from './components/Metrics';
+import { BlogsGallery, CoursesCatalog, EventsCalendar } from './components/views';
 import { useCommandK } from './hooks';
 import { api } from './services/api';
 import type { MetricsResponse, ViewType, FeedItem } from './types';
@@ -84,9 +85,9 @@ function App() {
         {activeView === 'home' && (
           <HomeView loading={loading} error={error} />
         )}
-        {activeView === 'events' && <FeedList filterType="event" title="Events" />}
-        {activeView === 'courses' && <FeedList filterType="course" title="Courses" />}
-        {activeView === 'blogs' && <FeedList filterType="blog" title="Blogs" />}
+        {activeView === 'events' && <EventsCalendar />}
+        {activeView === 'courses' && <CoursesCatalog />}
+        {activeView === 'blogs' && <BlogsGallery />}
         {activeView === 'actions' && <PlaceholderView type="actions" />}
         {activeView === 'metrics' && <MetricsDashboard />}
         {activeView === 'inbox' && <PlaceholderView type="inbox" />}

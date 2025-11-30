@@ -35,8 +35,8 @@ interface ExtractedItemCardProps {
     onSaveTag?: (tag: string) => void;
 }
 
-// Clickable tag component
-function ClickableTag({
+// Clickable tag component - exported for use in other views
+export function ClickableTag({
     tag,
     isSaved,
     onSave

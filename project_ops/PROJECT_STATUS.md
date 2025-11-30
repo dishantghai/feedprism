@@ -88,6 +88,11 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-016: Dedicated View Modes**
+  - **BlogsGallery**: Grid/List toggle, rich preview cards with images, reading time, tags, source links
+  - **CoursesCatalog**: Full-width cards, provider branding, level filters, instructor/duration/cost
+  - **EventsCalendar**: Day/Week/Month/Year views, event dots, navigation, click-to-view events
+  - All views: No email wrapper, direct item display, integrated search/filters/tags
 - ✅ **F-001: Metrics Dashboard & System Health**
   - Full MetricsDashboard component with Recharts
   - Quality metrics: Precision@10, MRR, Latency p95, Dedup Rate
