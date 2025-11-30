@@ -7,8 +7,9 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Clock, ExternalLink } from 'lucide-react';
-import { formatRelativeTime, getInitials } from '../../lib/utils';
+import { formatRelativeTime } from '../../lib/utils';
 import { ExtractedItemCard } from './ExtractedItemCard';
+import { SourceIcon } from '../ui';
 import type { FeedItem } from '../../types';
 
 export interface EmailGroup {
@@ -48,9 +49,9 @@ export function FeedCard({ emailGroup, onItemClick, onEmailClick }: FeedCardProp
                 className="px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors group"
             >
                 <div className="flex items-center gap-3">
-                    {/* Sender Avatar */}
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--color-prism-start)] to-[var(--color-prism-end)] flex items-center justify-center text-xs text-white font-medium flex-shrink-0">
-                        {getInitials(sender)}
+                    {/* Gmail Source Icon as Avatar */}
+                    <div className="w-9 h-9 rounded-full bg-white border border-[var(--color-border-light)] flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <SourceIcon source="gmail" size="md" variant="inline" />
                     </div>
 
                     {/* Email Info */}

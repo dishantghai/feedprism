@@ -1,5 +1,7 @@
 # F-009: Source Icon Overlay
 
+**Status:** ✅ Complete (Nov 30, 2025)
+
 ## Problem
 Content items are extracted from emails (currently Gmail only), but there's no visual indicator showing the **source platform**. Users cannot quickly identify that content came from Gmail vs other potential sources (Outlook, Apple Mail, etc. in the future). This reduces trust and makes it harder to understand the provenance of extracted content.
 

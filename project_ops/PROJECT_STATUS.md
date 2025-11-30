@@ -88,6 +88,11 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-009: Source Icon Overlay**
+  - Created SourceIcon component with Gmail, Outlook, Apple Mail support
+  - Added icon overlay on FeedCard sender avatars
+  - Added icon badge in DetailModal header
+  - Extensible design for future email sources
 - ✅ **F-007: Filter by Sender**
   - Backend: `/api/feed/senders` endpoint with display names and counts
   - Frontend: SenderDropdown component with search and multi-select

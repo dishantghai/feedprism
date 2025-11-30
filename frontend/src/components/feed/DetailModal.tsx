@@ -18,7 +18,8 @@ import {
     Mail,
     Tag,
 } from 'lucide-react';
-import { formatRelativeTime, getTypeColor, getInitials } from '../../lib/utils';
+import { formatRelativeTime, getTypeColor } from '../../lib/utils';
+import { SourceIcon } from '../ui';
 import type { FeedItem } from '../../types';
 import type { EmailGroup } from './FeedCard';
 import { ExtractedItemCard } from './ExtractedItemCard';
@@ -98,8 +99,8 @@ export function DetailModal({ item, emailGroup, onClose, onItemClick }: DetailMo
                         )}
                         {showEmailGroup && (
                             <>
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-prism-start)] to-[var(--color-prism-end)] flex items-center justify-center text-sm text-white font-medium">
-                                    {getInitials(emailGroup.sender)}
+                                <div className="w-10 h-10 rounded-full bg-white border border-[var(--color-border-light)] flex items-center justify-center shadow-sm">
+                                    <SourceIcon source="gmail" size="md" variant="inline" />
                                 </div>
                                 <div>
                                     <p className="text-sm font-medium text-[var(--color-text-primary)]">
@@ -113,12 +114,17 @@ export function DetailModal({ item, emailGroup, onClose, onItemClick }: DetailMo
                         )}
                     </div>
 
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* Source indicator */}
+                        <SourceIcon source="gmail" size="md" variant="badge" showLabel />
+
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Content */}
@@ -332,9 +338,9 @@ function EmailGroupDetail({
             {/* Email Header Section */}
             <div className="bg-gradient-to-br from-[var(--color-bg-tertiary)] to-[var(--color-bg-secondary)] rounded-xl p-5 border border-[var(--color-border-light)]">
                 <div className="flex items-start gap-4">
-                    {/* Sender Avatar */}
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--color-prism-start)] to-[var(--color-prism-end)] flex items-center justify-center text-lg text-white font-semibold flex-shrink-0">
-                        {getInitials(emailGroup.sender)}
+                    {/* Gmail Icon as Avatar */}
+                    <div className="w-12 h-12 rounded-full bg-white border border-[var(--color-border-light)] flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <SourceIcon source="gmail" size="lg" variant="inline" />
                     </div>
 
                     <div className="flex-1 min-w-0">

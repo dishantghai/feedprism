@@ -5,8 +5,8 @@
  */
 
 import { Mail, Clock } from 'lucide-react';
-import { formatRelativeTime, truncate, getInitials } from '../../lib/utils';
-import { EmailItemSkeleton } from '../ui';
+import { formatRelativeTime, truncate } from '../../lib/utils';
+import { EmailItemSkeleton, SourceIcon } from '../ui';
 import type { EmailSummary } from '../../types';
 
 interface RawFeedPanelProps {
@@ -50,9 +50,9 @@ export function RawFeedPanel({ emails, loading, title = 'Raw Inbox' }: RawFeedPa
                     className="p-3 rounded-lg bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer group"
                 >
                     <div className="flex items-center gap-2 mb-1.5">
-                        {/* Sender Avatar */}
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--color-prism-start)] to-[var(--color-prism-end)] flex items-center justify-center text-[9px] text-white font-medium flex-shrink-0">
-                            {getInitials(email.sender)}
+                        {/* Gmail Icon as Avatar */}
+                        <div className="w-6 h-6 rounded-full bg-white border border-[var(--color-border-light)] flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <SourceIcon source="gmail" size="sm" variant="inline" />
                         </div>
                         <span className="text-xs font-medium text-[var(--color-text-primary)] truncate">
                             {email.sender}

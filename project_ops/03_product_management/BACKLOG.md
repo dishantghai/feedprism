@@ -35,6 +35,9 @@ Frontend metrics panel showing precision@k, latency, extraction counts, and pipe
 
 ## Completed
 
+#### ✅ F-009: Source Icon Overlay (Nov 30, 2025)
+Gmail icon on FeedCard avatars and DetailModal header. Extensible for future sources.
+
 #### ✅ F-007: Filter by Sender (Nov 30, 2025)
 Sender dropdown in FilterBar with search, multi-select, display names, and item counts.
 

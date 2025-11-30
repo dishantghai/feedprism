@@ -8,3 +8,5 @@ export {
     SidebarCountSkeleton,
     MetricsGridSkeleton,
 } from './Skeleton';
+
+export { SourceIcon, type EmailSource } from './SourceIcon';
