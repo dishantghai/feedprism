@@ -12,7 +12,6 @@
 |----------|-------|
 | **This document** | Frontend UI phases (React + Vite + Tailwind) |
 | `02_planning/revised_implementation_guide/Phase_0-7_*.md` | Backend/Qdrant implementation |
-| `02_planning/revised_implementation_guide/Phase_5_Enhancements.md` | Feed card UX enhancements |
 | `PROJECT_STATUS.md` | **Single source of truth for progress** |
 
 ---
