@@ -78,6 +78,9 @@ class EmailSummary(BaseModel):
 class EmailDetail(EmailSummary):
     """Full email details with extracted items."""
     body_preview: Optional[str] = None
+    body_html: Optional[str] = None  # Full HTML body for modal view
+    body_text: Optional[str] = None  # Plain text fallback
+    gmail_link: Optional[str] = None  # Deep link to Gmail
     extracted_items: List[ExtractedItem] = Field(default_factory=list)
 
 

@@ -113,8 +113,9 @@ export async function getPrismStats(): Promise<PrismStats> {
     return fetchJson<PrismStats>(`${API_BASE}/emails/prism-stats`);
 }
 
-export async function getEmailDetail(emailId: string): Promise<EmailDetail> {
-    return fetchJson<EmailDetail>(`${API_BASE}/emails/${emailId}`);
+export async function getEmailDetail(emailId: string, includeBody = false): Promise<EmailDetail> {
+    const params = includeBody ? '?include_body=true' : '';
+    return fetchJson<EmailDetail>(`${API_BASE}/emails/${emailId}${params}`);
 }
 
 // =============================================================================

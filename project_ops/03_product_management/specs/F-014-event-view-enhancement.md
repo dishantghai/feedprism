@@ -20,7 +20,9 @@ The current Event views (both in Recent Extractions and Detail View) are sparse 
   - **Title:** Bold, 2 lines max.
   - **Meta:** Time & Location with icons (🕒 10:00 AM • 📍 Online).
   - **Description:** 2-3 lines of text preview to give context.
-  - **Footer:** "View Source Email" icon/link (integrates with F-008).
+  - **Actions Row:**
+    - **Primary:** "Register" / "RSVP" button (accent color).
+    - **Secondary:** "View Source" icon/link.
 
 ```text
 ┌────────────────────────────────────────────────────┐
@@ -30,7 +32,7 @@ The current Event views (both in Recent Extractions and Detail View) are sparse 
 │  └──────┘  Join us for a deep dive into the lat... │
 │            transformers and LLM architectures.     │
 │                                                    │
-│  [#NLP] [#AI]                  [📧 View Source]    │
+│  [ Register ↗ ]   [📧 View Source]      [#NLP]     │
 └────────────────────────────────────────────────────┘
 ```
 
@@ -69,7 +71,7 @@ The current Event views (both in Recent Extractions and Detail View) are sparse 
 - **Styling:** Use CSS Grid for the Date Badge layout.
 - **Integration:**
   - Connect "View Source" to the `EmailModal` (F-008).
-  - Ensure "Register" link opens the extracted URL.
+  - **Primary Action:** Add a "Register" button that opens the `registration_url` in a new tab.
   - Implement "Add to Calendar" (generate .ics or Google Calendar link).
 
 ### Backend
@@ -80,6 +82,7 @@ The current Event views (both in Recent Extractions and Detail View) are sparse 
 ## Acceptance Criteria
 - [ ] Event Card in Recent Extractions is larger and shows description snippet.
 - [ ] Date and Time are visually distinct and easy to scan.
+- [ ] **Primary Action (Register/RSVP) is visible and clickable directly on the card.**
 - [ ] "View Source Email" link is present and functional in both Card and Detail views.
 - [ ] Detail view shows full description and primary CTAs (Register, Calendar).
 - [ ] UI is responsive and looks "premium" (consistent with Arc/Notion aesthetic).

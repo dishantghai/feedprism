@@ -286,6 +286,33 @@ class GmailClient:
             'internal_date': int(message.get('internalDate', 0))
         }
     
+    def get_email_body(self, message_id: str) -> Dict[str, Optional[str]]:
+        """
+        Fetch email body by message ID.
+        
+        Args:
+            message_id: Gmail message ID
+            
+        Returns:
+            Dict with 'body_html' and 'body_text' keys
+        """
+        try:
+            message = self.service.users().messages().get(
+                userId=self.user_id,
+                id=message_id,
+                format='full'
+            ).execute()
+            
+            body = self.extract_body(message)
+            
+            return {
+                'body_html': body.get('html'),
+                'body_text': body.get('text')
+            }
+        except HttpError as e:
+            logger.error(f"Failed to fetch email body {message_id}: {e}")
+            raise
+    
     def save_emails_to_json(
         self,
         emails: List[Dict[str, Any]],

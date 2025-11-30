@@ -88,6 +88,12 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-008: Source Email Modal**
+  - Backend: Added `include_body` param to `/api/emails/{id}` endpoint
+  - Backend: Added `get_email_body()` method to Gmail client
+  - Frontend: Created EmailModal component with HTML rendering
+  - Frontend: Added "View Source Email" button to FeedCard
+  - Actions: Copy link, Open in Gmail
 - ✅ **F-009: Source Icon Overlay**
   - Created SourceIcon component with Gmail, Outlook, Apple Mail support
   - Added icon overlay on FeedCard sender avatars

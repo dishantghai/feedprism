@@ -6,10 +6,11 @@
  */
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Clock, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, ExternalLink, Mail } from 'lucide-react';
 import { formatRelativeTime } from '../../lib/utils';
 import { ExtractedItemCard } from './ExtractedItemCard';
 import { SourceIcon } from '../ui';
+import { EmailModal } from '../email';
 import type { FeedItem } from '../../types';
 
 export interface EmailGroup {
@@ -28,8 +29,9 @@ interface FeedCardProps {
 }
 
 export function FeedCard({ emailGroup, onItemClick, onEmailClick }: FeedCardProps) {
-    const { email_subject, sender, received_at, items } = emailGroup;
+    const { email_id, email_subject, sender, received_at, items } = emailGroup;
     const [showAll, setShowAll] = useState(false);
+    const [showEmailModal, setShowEmailModal] = useState(false);
 
     // Show max 3 items initially
     const visibleItems = showAll ? items : items.slice(0, 3);
@@ -124,7 +126,26 @@ export function FeedCard({ emailGroup, onItemClick, onEmailClick }: FeedCardProp
                         )}
                     </button>
                 )}
+
+                {/* View Source Email button */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setShowEmailModal(true);
+                    }}
+                    className="flex items-center justify-center gap-1.5 w-full py-2 text-xs font-medium text-[var(--color-accent-blue)] hover:bg-[var(--color-accent-blue)]/5 rounded-lg transition-colors"
+                >
+                    <Mail className="w-3.5 h-3.5" />
+                    View Source Email
+                </button>
             </div>
+
+            {/* Email Modal */}
+            <EmailModal
+                emailId={email_id}
+                isOpen={showEmailModal}
+                onClose={() => setShowEmailModal(false)}
+            />
         </div>
     );
 }

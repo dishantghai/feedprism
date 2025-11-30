@@ -35,6 +35,9 @@ Frontend metrics panel showing precision@k, latency, extraction counts, and pipe
 
 ## Completed
 
+#### ✅ F-008: Source Email Modal (Nov 30, 2025)
+View original email in modal with HTML body, metadata, and "Open in Gmail" action.
+
 #### ✅ F-009: Source Icon Overlay (Nov 30, 2025)
 Gmail icon on FeedCard avatars and DetailModal header. Extensible for future sources.
 

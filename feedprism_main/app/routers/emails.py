@@ -231,9 +231,13 @@ async def get_prism_stats():
 
 
 @router.get("/{email_id}", response_model=EmailDetail)
-async def get_email_detail(email_id: str):
-    """Get detailed email information with all extracted items."""
-    logger.info(f"Fetching email detail: {email_id}")
+async def get_email_detail(email_id: str, include_body: bool = Query(False, description="Include email body HTML")):
+    """
+    Get detailed email information with all extracted items.
+    
+    Set include_body=true to fetch the full email body from Gmail (for modal view).
+    """
+    logger.info(f"Fetching email detail: {email_id}, include_body={include_body}")
     
     email_data = None
     extracted_items = []
@@ -289,6 +293,21 @@ async def get_email_detail(email_id: str):
     if email_data is None:
         raise HTTPException(status_code=404, detail="Email not found")
     
+    # Fetch email body from Gmail if requested
+    body_html = None
+    body_text = None
+    gmail_link = f"https://mail.google.com/mail/u/0/#inbox/{email_id}"
+    
+    if include_body:
+        try:
+            gmail = get_gmail_client()
+            email_content = gmail.get_email_body(email_id)
+            body_html = email_content.get("body_html")
+            body_text = email_content.get("body_text")
+        except Exception as e:
+            logger.warning(f"Failed to fetch email body: {e}")
+            body_text = "(Email body could not be loaded)"
+    
     return EmailDetail(
         id=email_data["id"],
         subject=email_data["subject"],
@@ -296,5 +315,8 @@ async def get_email_detail(email_id: str):
         sender_email=email_data["sender_email"],
         received_at=email_data["received_at"],
         extracted_count=len(extracted_items),
+        body_html=body_html,
+        body_text=body_text,
+        gmail_link=gmail_link,
         extracted_items=extracted_items
     )

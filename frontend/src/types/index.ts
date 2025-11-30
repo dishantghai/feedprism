@@ -82,6 +82,9 @@ export interface EmailSummary {
 
 export interface EmailDetail extends EmailSummary {
     body_preview?: string;
+    body_html?: string | null;
+    body_text?: string | null;
+    gmail_link?: string | null;
     extracted_items: ExtractedItem[];
 }
 

@@ -1,5 +1,7 @@
 # F-008: Source Email Modal Viewer
 
+**Status:** ✅ Complete (Nov 30, 2025)
+
 ## Problem
 Users can see extracted content (events, courses, blogs) but have no way to view the **original source email** that the content was extracted from. This breaks the provenance chain and reduces trust in the extraction accuracy. Users cannot verify details, see full context, or access information that wasn't extracted.
 

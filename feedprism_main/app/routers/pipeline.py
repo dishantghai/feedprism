@@ -22,6 +22,7 @@ from app.services.gmail_client import GmailClient
 from app.services.parser import EmailParser
 from app.services.orchestrator import ExtractionOrchestrator
 from app.services.embedder import EmbeddingService
+from app.services.analytics import AnalyticsService
 from app.utils.sparse_vector import create_sparse_vector
 
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
@@ -329,6 +330,9 @@ async def _extraction_stream(email_ids: List[str]) -> AsyncGenerator[str, None]:
                     "message": f"Fetching email {idx}/{total}"
                 })
                 
+                # Start timer for latency tracking
+                email_start_time = time.time()
+                
                 email = gmail.get_message(email_id)
                 headers = gmail.parse_message_headers(email)
                 body = gmail.extract_body(email)
@@ -527,6 +531,10 @@ async def _extraction_stream(email_ids: List[str]) -> AsyncGenerator[str, None]:
                     results["blogs"] += len(blogs)
                 
                 results["emails_processed"] += 1
+                
+                # Record latency
+                duration_ms = (time.time() - email_start_time) * 1000
+                AnalyticsService.track_latency(duration_ms)
                 
                 # Update global progress with totals
                 update_progress(
