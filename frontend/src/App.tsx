@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2 } from 'lucide-react';
 import { Layout } from './components/layout';
 import { PrismOverview } from './components/prism';
 import { FeedList } from './components/feed';
 import { CommandPalette } from './components/search';
+import { MetricsGridSkeleton } from './components/ui';
 import { useCommandK } from './hooks';
 import { api } from './services/api';
 import type { MetricsResponse, ViewType, FeedItem } from './types';
@@ -150,11 +150,7 @@ interface MetricsViewProps {
 
 function MetricsView({ metrics, loading, error }: MetricsViewProps) {
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 animate-spin text-[var(--color-accent-blue)]" />
-      </div>
-    );
+    return <MetricsGridSkeleton />;
   }
 
   if (error) {

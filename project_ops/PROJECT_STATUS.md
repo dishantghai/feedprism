@@ -88,6 +88,10 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-005: Loading States & Skeleton UI**
+  - Created reusable skeleton components in `components/ui/Skeleton.tsx`
+  - Components: FeedCard, EmailItem, Metrics, BlogCard, DetailModal skeletons
+  - Replaced spinners with content-aware skeletons for better perceived performance
 - ✅ **F-004: Blog View Enhancement**
   - Full blog cards in email view (not compact like events/courses)
   - Detail modal: featured image, hook with accent border, key takeaways section

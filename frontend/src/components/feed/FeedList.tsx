@@ -9,6 +9,7 @@ import { Inbox, RefreshCw, AlertCircle } from 'lucide-react';
 import { FeedCard, type EmailGroup } from './FeedCard';
 import { DetailModal } from './DetailModal';
 import { FilterBar, type FilterState, type StatusFilter, type SortOption } from '../search';
+import { FeedCardSkeleton } from '../ui';
 import { api } from '../../services/api';
 import type { FeedItem, ItemType } from '../../types';
 
@@ -270,44 +271,6 @@ export function FeedList({
                     onItemClick={handleItemClick}
                 />
             )}
-        </div>
-    );
-}
-
-// Skeleton loader for feed card - matches FeedCard design
-function FeedCardSkeleton() {
-    return (
-        <div className="bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-border-light)] overflow-hidden animate-pulse">
-            {/* Email header skeleton */}
-            <div className="px-4 py-3 border-b border-[var(--color-border-light)]">
-                <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-[var(--color-border-medium)]" />
-                    <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                            <div className="h-4 w-32 bg-[var(--color-border-medium)] rounded" />
-                            <div className="h-3 w-16 bg-[var(--color-border-light)] rounded" />
-                        </div>
-                        <div className="h-3 w-48 bg-[var(--color-border-light)] rounded" />
-                    </div>
-                    <div className="flex gap-1">
-                        <div className="h-5 w-14 bg-[var(--color-border-light)] rounded" />
-                        <div className="h-5 w-14 bg-[var(--color-border-light)] rounded" />
-                    </div>
-                </div>
-            </div>
-
-            {/* Content skeleton */}
-            <div className="p-4 space-y-3">
-                <div className="rounded-xl border border-[var(--color-border-light)] p-4 space-y-3">
-                    <div className="h-5 w-3/4 bg-[var(--color-border-medium)] rounded" />
-                    <div className="h-4 w-full bg-[var(--color-border-light)] rounded" />
-                    <div className="h-4 w-2/3 bg-[var(--color-border-light)] rounded" />
-                    <div className="flex gap-2 pt-2">
-                        <div className="h-5 w-16 bg-[var(--color-border-light)] rounded-full" />
-                        <div className="h-5 w-20 bg-[var(--color-border-light)] rounded-full" />
-                    </div>
-                </div>
-            </div>
         </div>
     );
 }

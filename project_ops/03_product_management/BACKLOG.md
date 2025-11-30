@@ -13,10 +13,6 @@ Priority: P1
 Frontend metrics panel showing precision@k, latency, extraction counts, and pipeline health.
 
 
-#### F-005: Loading States & Skeleton UI
-Priority: P2
-Add proper loading skeletons and states across all views for better perceived performance.
-
 #### F-006: Micro-animations & Polish
 Priority: P2
 Subtle transitions, hover effects, and visual polish for production-ready feel.
@@ -42,6 +38,9 @@ Subtle transitions, hover effects, and visual polish for production-ready feel.
 ---
 
 ## Completed
+
+#### ✅ F-005: Loading States & Skeleton UI (Nov 30, 2025)
+Reusable skeleton components (FeedCard, EmailItem, Metrics, BlogCard, DetailModal) with shimmer animation.
 
 #### ✅ F-004: Blog View Enhancement (Nov 30, 2025)
 Full blog cards in email view (not compact), detail modal with featured image, hook, key takeaways.

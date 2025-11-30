@@ -36,7 +36,67 @@ Content items (events, courses, blogs) have many tags extracted from emails. Use
 - Saved tags: Colored background (accent color), filled star icon
 - Click again: Unsave (star outline, gray background)
 
-### 2. Viewing Saved Tags in Command Bar
+### 2. Quick Tag Selection Bar (Between Command Bar & Search Bar)
+
+**NEW: Tag Quick Select Bar:**
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  COMMAND BAR (⌘K)                                                │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│  🏷️ Quick Tags:                                                  │
+│  [NLP] [AI] [Workshop] [Python] [Deep Learning]  [+ More ▾]     │
+│   ↑ Click to filter                                ↑ Dropdown    │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│  🔍  Search your feed...                                    ⌘K  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Tag Quick Select Bar Features:**
+- **Location:** Between Command Bar and Search Bar (always visible)
+- **Shows:** Top 5 most-used saved tags as clickable pills
+- **Interaction:** Click tag → instantly filters content
+- **Multi-select:** Click multiple tags (OR logic)
+- **Dropdown:** "[+ More ▾]" button opens searchable tag selector
+- **Visual:** Selected tags have blue background, unselected are gray
+- **Responsive:** On mobile, shows top 3 tags + dropdown
+
+**Searchable Tag Dropdown:**
+```
+┌──────────────────────────────────────────────────────┐
+│  🔍 Search tags...                                   │
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│  MOST USED                                           │
+│  ☑ NLP (12)                                         │
+│  ☐ Workshop (8)                                     │
+│  ☑ AI (45)                                          │
+│  ☐ Python (23)                                      │
+│  ☐ Deep Learning (15)                               │
+│                                                      │
+│  ALL SAVED TAGS (alphabetical)                       │
+│  ☐ Agents (7)                                       │
+│  ☐ AutoGPT (4)                                      │
+│  ☐ ChatGPT (18)                                     │
+│  ...                                                 │
+│                                                      │
+│  [Clear All]                        [Apply (2)]     │
+└──────────────────────────────────────────────────────┘
+```
+
+**Dropdown Behavior:**
+- Opens on "[+ More ▾]" click
+- Search box filters tags in real-time
+- Multi-select with checkboxes
+- Shows selected count in "Apply" button
+- "Clear All" deselects all tags
+- Click outside or "Apply" to close
+- Keyboard: ↑/↓ to navigate, Space to toggle, Enter to apply
+
+### 3. Viewing Saved Tags in Command Bar (⌘K)
 
 **Command Bar (⌘K):**
 ```
@@ -64,6 +124,7 @@ Content items (events, courses, blogs) have many tags extracted from emails. Use
 - "Show all" link opens a modal/drawer with full list
 - Click a tag → filters Library view by that tag
 - Multi-select: Shift+Click or checkboxes for multiple tags
+- **Note:** This is a secondary access point; primary is the Quick Tag Bar above
 
 ### 3. Filtering by Tags
 
@@ -105,6 +166,150 @@ interface TagPillProps {
 // - Hover (unsaved): bg-gray-200, show star outline
 // - Saved: bg-blue-100, text-blue-700, filled star
 // - Transition: 150ms ease
+```
+
+#### 2. QuickTagBar Component (NEW)
+```tsx
+// src/components/QuickTagBar/QuickTagBar.tsx
+interface QuickTagBarProps {
+  topTags: Array<{ tag: string; count: number }>;  // Top 5 most-used
+  selectedTags: string[];                          // Currently active filters
+  onToggleTag: (tag: string) => void;
+  onOpenDropdown: () => void;
+}
+
+const QuickTagBar: React.FC<QuickTagBarProps> = ({
+  topTags,
+  selectedTags,
+  onToggleTag,
+  onOpenDropdown
+}) => {
+  return (
+    <div className="quick-tag-bar">
+      <span className="quick-tag-label">🏷️ Quick Tags:</span>
+      <div className="quick-tag-pills">
+        {topTags.slice(0, 5).map(({ tag, count }) => (
+          <button
+            key={tag}
+            className={`quick-tag-pill ${selectedTags.includes(tag) ? 'selected' : ''}`}
+            onClick={() => onToggleTag(tag)}
+            title={`${count} items`}
+          >
+            {tag}
+          </button>
+        ))}
+      </div>
+      <button 
+        className="quick-tag-more-btn"
+        onClick={onOpenDropdown}
+      >
+        + More ▾
+      </button>
+    </div>
+  );
+};
+
+// Features:
+// - Always visible (sticky below Command Bar)
+// - Top 5 tags update based on usage
+// - Selected state persists across navigation
+// - Responsive: shows 3 tags on mobile
+```
+
+#### 3. TagDropdown Component (NEW)
+```tsx
+// src/components/QuickTagBar/TagDropdown.tsx
+interface TagDropdownProps {
+  allSavedTags: Array<{ tag: string; count: number }>;
+  selectedTags: string[];
+  onToggleTag: (tag: string) => void;
+  onClearAll: () => void;
+  onApply: () => void;
+  onClose: () => void;
+  isOpen: boolean;
+}
+
+const TagDropdown: React.FC<TagDropdownProps> = ({
+  allSavedTags,
+  selectedTags,
+  onToggleTag,
+  onClearAll,
+  onApply,
+  onClose,
+  isOpen
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const filteredTags = allSavedTags.filter(({ tag }) =>
+    tag.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  const mostUsed = filteredTags.slice(0, 5);
+  const alphabetical = filteredTags.sort((a, b) => a.tag.localeCompare(b.tag));
+  
+  return (
+    <div className={`tag-dropdown ${isOpen ? 'open' : ''}`}>
+      <div className="tag-dropdown-search">
+        <input
+          type="text"
+          placeholder="🔍 Search tags..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          autoFocus
+        />
+      </div>
+      
+      <div className="tag-dropdown-content">
+        <div className="tag-section">
+          <div className="tag-section-header">MOST USED</div>
+          {mostUsed.map(({ tag, count }) => (
+            <label key={tag} className="tag-dropdown-item">
+              <input
+                type="checkbox"
+                checked={selectedTags.includes(tag)}
+                onChange={() => onToggleTag(tag)}
+              />
+              <span className="tag-name">{tag}</span>
+              <span className="tag-count">({count})</span>
+            </label>
+          ))}
+        </div>
+        
+        <div className="tag-section">
+          <div className="tag-section-header">ALL SAVED TAGS (alphabetical)</div>
+          {alphabetical.map(({ tag, count }) => (
+            <label key={tag} className="tag-dropdown-item">
+              <input
+                type="checkbox"
+                checked={selectedTags.includes(tag)}
+                onChange={() => onToggleTag(tag)}
+              />
+              <span className="tag-name">{tag}</span>
+              <span className="tag-count">({count})</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      
+      <div className="tag-dropdown-footer">
+        <button onClick={onClearAll} className="btn-secondary">
+          Clear All
+        </button>
+        <button onClick={onApply} className="btn-primary">
+          Apply ({selectedTags.length})
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Features:
+// - Real-time search filtering
+// - Two sections: Most Used + All Saved (alphabetical)
+// - Multi-select with checkboxes
+// - Shows selected count in Apply button
+// - Keyboard navigation (↑/↓, Space, Enter)
+// - Click outside to close
 ```
 
 #### 2. SavedTagsSection Component
@@ -328,6 +533,253 @@ interface SavedTagsContextType {
   background: var(--color-bg-secondary);
   padding: 2px 6px;
   border-radius: 4px;
+}
+```
+
+**Quick Tag Bar (NEW):**
+```css
+.quick-tag-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: var(--header-height); /* Stick below header/command bar */
+  z-index: 100;
+}
+
+.quick-tag-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.quick-tag-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.quick-tag-pill {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.quick-tag-pill:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-hover);
+  transform: translateY(-1px);
+}
+
+.quick-tag-pill.selected {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.quick-tag-pill.selected:hover {
+  background: var(--color-primary);
+  color: white;
+}
+
+.quick-tag-more-btn {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.quick-tag-more-btn:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-hover);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .quick-tag-bar {
+    padding: 8px 16px;
+  }
+  
+  .quick-tag-pills {
+    gap: 6px;
+  }
+  
+  /* Show only top 3 tags on mobile */
+  .quick-tag-pill:nth-child(n+4) {
+    display: none;
+  }
+}
+```
+
+**Tag Dropdown (NEW):**
+```css
+.tag-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: 360px;
+  max-height: 500px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dropdown);
+  display: none;
+  flex-direction: column;
+  z-index: 1000;
+}
+
+.tag-dropdown.open {
+  display: flex;
+  animation: slideDown 200ms ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tag-dropdown-search {
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tag-dropdown-search input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  background: var(--color-bg-tertiary);
+  transition: all 150ms ease;
+}
+
+.tag-dropdown-search input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--color-bg-card);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.tag-dropdown-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.tag-section {
+  margin-bottom: 16px;
+}
+
+.tag-section-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.5px;
+  padding: 8px 12px 4px;
+  text-transform: uppercase;
+}
+
+.tag-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 100ms ease;
+}
+
+.tag-dropdown-item:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.tag-dropdown-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.tag-dropdown-item .tag-name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--color-text-primary);
+}
+
+.tag-dropdown-item .tag-count {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.tag-dropdown-footer {
+  padding: 12px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.tag-dropdown-footer .btn-secondary {
+  padding: 8px 16px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.tag-dropdown-footer .btn-secondary:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.tag-dropdown-footer .btn-primary {
+  padding: 8px 16px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.tag-dropdown-footer .btn-primary:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.tag-dropdown-footer .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 ```
 

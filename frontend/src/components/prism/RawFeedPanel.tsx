@@ -6,6 +6,7 @@
 
 import { Mail, Clock } from 'lucide-react';
 import { formatRelativeTime, truncate, getInitials } from '../../lib/utils';
+import { EmailItemSkeleton } from '../ui';
 import type { EmailSummary } from '../../types';
 
 interface RawFeedPanelProps {
@@ -19,14 +20,7 @@ export function RawFeedPanel({ emails, loading, title = 'Raw Inbox' }: RawFeedPa
         return (
             <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
-                    <div key={i} className="p-3 rounded-lg bg-[var(--color-bg-tertiary)] animate-pulse">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-6 h-6 rounded-full bg-[var(--color-border-medium)]" />
-                            <div className="h-3 w-24 bg-[var(--color-border-medium)] rounded" />
-                        </div>
-                        <div className="h-3 w-full bg-[var(--color-border-medium)] rounded mb-1" />
-                        <div className="h-3 w-2/3 bg-[var(--color-border-medium)] rounded" />
-                    </div>
+                    <EmailItemSkeleton key={i} />
                 ))}
             </div>
         );
