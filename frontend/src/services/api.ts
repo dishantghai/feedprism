@@ -299,6 +299,97 @@ export function startExtraction(
     return () => controller.abort();
 }
 
+/**
+ * Get list of all processed email IDs from Qdrant.
+ */
+export interface ProcessedEmailsResponse {
+    count: number;
+    email_ids: string[];
+}
+
+export async function getProcessedEmails(): Promise<ProcessedEmailsResponse> {
+    return fetchJson<ProcessedEmailsResponse>(`${API_BASE}/pipeline/processed-emails`);
+}
+
+/**
+ * Start re-extraction pipeline for existing emails.
+ * Deletes existing items and re-extracts with latest logic.
+ */
+export function startReExtraction(
+    emailIds: string[] | null,
+    onEvent: (event: ExtractionEvent) => void,
+    onError: (error: Error) => void,
+    onComplete: () => void
+): () => void {
+    const controller = new AbortController();
+
+    fetch(`${API_BASE}/pipeline/re-extract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailIds),
+        signal: controller.signal,
+    })
+        .then(async (response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const reader = response.body?.getReader();
+            if (!reader) {
+                throw new Error('No response body');
+            }
+
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+
+                // Parse SSE events from buffer
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                let currentEvent: string | null = null;
+                let currentData: string | null = null;
+
+                for (const line of lines) {
+                    if (line.startsWith('event: ')) {
+                        currentEvent = line.slice(7);
+                    } else if (line.startsWith('data: ')) {
+                        currentData = line.slice(6);
+                    } else if (line === '' && currentEvent && currentData) {
+                        try {
+                            const parsed: ExtractionEvent = {
+                                type: currentEvent as ExtractionEvent['type'],
+                                data: JSON.parse(currentData),
+                            };
+                            onEvent(parsed);
+
+                            if (parsed.type === 'complete') {
+                                onComplete();
+                            }
+                        } catch (e) {
+                            console.error('Failed to parse SSE event:', e);
+                        }
+                        currentEvent = null;
+                        currentData = null;
+                    }
+                }
+            }
+        })
+        .catch((error) => {
+            if (error.name !== 'AbortError') {
+                onError(error);
+            }
+        });
+
+    // Return abort function
+    return () => controller.abort();
+}
+
 // =============================================================================
 // Export all as api object for convenience
 // =============================================================================
@@ -327,6 +418,8 @@ export const api = {
     getPipelineSettings,
     getExtractionStatus,
     startExtraction,
+    getProcessedEmails,
+    startReExtraction,
 };
 
 export default api;

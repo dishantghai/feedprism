@@ -46,7 +46,6 @@
 
 **Current P1 Items:**
 - F-001: Metrics Dashboard Panel
-- I-001: Re-extract emails for new fields (now has image_url, hook, etc.)
 
 **Workflow:** `03_product_management/WORKFLOW.md` explains the minimal AI-assisted spec-driven process.
 
@@ -89,6 +88,10 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **I-001: Re-extract Existing Emails**
+  - Added `/api/pipeline/re-extract` endpoint to re-process emails with new logic
+  - Added `/api/pipeline/processed-emails` endpoint to list processed email IDs
+  - Added `delete_by_email_ids()` to QdrantService for cleanup before re-extraction
 - ✅ **B-001: SSE Extraction State Sync** - Frontend now syncs with backend extraction state
   - Added `/api/pipeline/extraction-status` endpoint with global state tracking
   - Frontend checks status on mount and polls during extraction

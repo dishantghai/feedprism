@@ -31,9 +31,7 @@ Subtle transitions, hover effects, and visual polish for production-ready feel.
 
 ### Improvements
 
-#### I-001: Re-extract Existing Emails for New Fields
-Priority: P1
-Feed cards need re-extraction to populate new fields (hook, image_url, etc.) added in Phase 5 enhancements.
+*None tracked currently.*
 
 ---
 
@@ -44,6 +42,9 @@ Feed cards need re-extraction to populate new fields (hook, image_url, etc.) add
 ---
 
 ## Completed
+
+#### ✅ I-001: Re-extract Existing Emails (Nov 30, 2025)
+Added `/api/pipeline/re-extract` endpoint to re-process emails with new extraction logic (hook, image_url, etc.).
 
 #### ✅ B-001: SSE Extraction State Sync (Nov 30, 2025)
 Backend status endpoint + frontend polling to sync extraction state on page refresh.

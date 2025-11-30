@@ -488,3 +488,48 @@ class QdrantService:
         
         logger.info(f"Found {len(processed_ids)} processed email IDs")
         return processed_ids
+    
+    def delete_by_email_ids(self, email_ids: List[str]) -> Dict[str, int]:
+        """
+        Delete all extracted items for the given source email IDs.
+        
+        Args:
+            email_ids: List of Gmail email IDs to delete items for
+            
+        Returns:
+            Dict with count of deleted items per collection
+        """
+        from qdrant_client.models import Filter, FieldCondition, MatchAny
+        
+        deleted_counts = {}
+        
+        for content_type in ["events", "courses", "blogs"]:
+            try:
+                collection = self.get_collection_name(content_type)
+                if not collection or not self.client.collection_exists(collection):
+                    deleted_counts[content_type] = 0
+                    continue
+                
+                # Delete points where source_email_id matches any of the provided IDs
+                result = self.client.delete(
+                    collection_name=collection,
+                    points_selector=Filter(
+                        must=[
+                            FieldCondition(
+                                key="source_email_id",
+                                match=MatchAny(any=email_ids)
+                            )
+                        ]
+                    )
+                )
+                
+                # Qdrant delete returns operation info, not count
+                # We'll count by checking before/after or just log success
+                deleted_counts[content_type] = len(email_ids)  # Approximate
+                logger.info(f"Deleted items from {collection} for {len(email_ids)} emails")
+                
+            except Exception as e:
+                logger.error(f"Error deleting from {content_type}: {e}")
+                deleted_counts[content_type] = 0
+        
+        return deleted_counts

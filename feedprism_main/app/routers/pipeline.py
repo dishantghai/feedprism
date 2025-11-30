@@ -612,3 +612,62 @@ async def get_pipeline_settings():
         "llm_model": settings.llm_model,
         "embedding_model": settings.embedding_model_name
     }
+
+
+@router.post("/re-extract")
+async def re_extract_emails(email_ids: List[str] = None):
+    """
+    Re-extract content from existing emails.
+    
+    This deletes existing extracted items for the specified emails (or all if none specified)
+    and re-runs extraction with the latest extraction logic (including new fields like
+    hook, image_url, author_title, key_points).
+    
+    Args:
+        email_ids: Optional list of specific email IDs to re-extract. 
+                   If not provided, re-extracts ALL processed emails.
+    
+    Returns:
+        SSE stream with re-extraction progress.
+    """
+    qdrant = get_qdrant()
+    
+    # If no email IDs provided, get all processed email IDs
+    if not email_ids:
+        email_ids = list(qdrant.get_processed_email_ids())
+    
+    if not email_ids:
+        raise HTTPException(status_code=400, detail="No emails to re-extract")
+    
+    logger.info(f"Starting re-extraction for {len(email_ids)} emails")
+    
+    # Delete existing extracted items for these emails
+    deleted = qdrant.delete_by_email_ids(email_ids)
+    logger.info(f"Deleted existing items: {deleted}")
+    
+    # Run extraction pipeline on these emails
+    return StreamingResponse(
+        _extraction_stream(email_ids),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+@router.get("/processed-emails")
+async def get_processed_emails():
+    """
+    Get list of all processed email IDs from Qdrant.
+    
+    Useful for checking what's been extracted and for re-extraction.
+    """
+    qdrant = get_qdrant()
+    email_ids = list(qdrant.get_processed_email_ids())
+    
+    return {
+        "count": len(email_ids),
+        "email_ids": email_ids
+    }
