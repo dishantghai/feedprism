@@ -1,5 +1,7 @@
 # F-007: Filter by Sender with Human-Readable Names
 
+**Status:** ✅ Complete (Nov 30, 2025)
+
 ## Problem
 Users want to filter content by sender (newsletter, company, person), but email addresses like `newsletter@aiweekly.co` are not user-friendly. The UI should show recognizable names like "AI Weekly" while using email addresses internally for filtering accuracy.
 

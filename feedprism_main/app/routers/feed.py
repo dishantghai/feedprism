@@ -5,6 +5,8 @@ Endpoints for listing and retrieving extracted content items.
 """
 
 from typing import List, Literal, Optional
+from collections import defaultdict
+from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
@@ -12,6 +14,19 @@ from app.database.qdrant_client import QdrantService
 from app.models.api import FeedItem, FeedResponse
 
 router = APIRouter(prefix="/api/feed", tags=["feed"])
+
+
+class SenderInfo(BaseModel):
+    """Sender information with display name and count."""
+    email: str
+    display_name: str
+    count: int
+
+
+class SendersResponse(BaseModel):
+    """Response for senders endpoint."""
+    senders: List[SenderInfo]
+    total: int
 
 # Initialize Qdrant service
 qdrant = QdrantService()
@@ -73,15 +88,16 @@ def _point_to_feed_item(point: dict, content_type: str) -> FeedItem:
 def get_feed(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    types: Optional[str] = Query(None, description="Comma-separated types: event,course,blog")
+    types: Optional[str] = Query(None, description="Comma-separated types: event,course,blog"),
+    senders: Optional[str] = Query(None, description="Comma-separated sender emails to filter by")
 ):
     """
     Get paginated feed of all extracted items.
     
     Returns items from all content types, sorted by extraction date.
-    Optimized to only fetch required items per page.
+    Supports filtering by type and sender.
     """
-    logger.info(f"Fetching feed: page={page}, page_size={page_size}, types={types}")
+    logger.info(f"Fetching feed: page={page}, page_size={page_size}, types={types}, senders={senders}")
     
     # Parse types filter
     type_list = ["events", "courses", "blogs"]
@@ -89,12 +105,17 @@ def get_feed(
         type_map = {"event": "events", "course": "courses", "blog": "blogs"}
         type_list = [type_map.get(t.strip(), t.strip()) for t in types.split(",")]
     
+    # Parse senders filter
+    sender_list = None
+    if senders:
+        sender_list = [s.strip().lower() for s in senders.split(",") if s.strip()]
+    
     all_items: List[FeedItem] = []
     total_count = 0
     
     # Fetch limited items from each collection (optimized)
     # We fetch more than page_size to allow for sorting across collections
-    fetch_limit = page_size * 2  # Fetch 2x to have enough for sorting
+    fetch_limit = page_size * 3 if sender_list else page_size * 2  # Fetch more if filtering
     
     for content_type in type_list:
         try:
@@ -102,12 +123,13 @@ def get_feed(
             if not collection:
                 continue
             
-            # Get collection info for total count
-            try:
-                info = qdrant.client.get_collection(collection)
-                total_count += info.points_count
-            except:
-                pass
+            # Get collection info for total count (only if no sender filter)
+            if not sender_list:
+                try:
+                    info = qdrant.client.get_collection(collection)
+                    total_count += info.points_count
+                except:
+                    pass
                 
             # Fetch only what we need (scroll once with limit)
             batch, _ = qdrant.client.scroll(
@@ -121,6 +143,12 @@ def get_feed(
             item_type = content_type.rstrip("s")  # events -> event
             
             for point in batch:
+                # Apply sender filter if specified
+                if sender_list:
+                    sender_email = (point.payload.get("source_sender_email") or "").lower()
+                    if sender_email not in sender_list:
+                        continue
+                
                 item = _point_to_feed_item(
                     {"id": point.id, "payload": point.payload},
                     item_type
@@ -130,6 +158,10 @@ def get_feed(
         except Exception as e:
             logger.warning(f"Error fetching from {content_type}: {e}")
             continue
+    
+    # Update total count if sender filter was applied
+    if sender_list:
+        total_count = len(all_items)
     
     # Sort by extracted_at (newest first)
     all_items.sort(
@@ -149,6 +181,90 @@ def get_feed(
         page_size=page_size,
         has_more=len(all_items) > end
     )
+
+
+@router.get("/senders", response_model=SendersResponse)
+def get_senders():
+    """
+    Get all unique senders with their display names and item counts.
+    
+    Returns senders sorted by count (most items first).
+    """
+    logger.info("Fetching all senders")
+    
+    # Aggregate senders across all collections
+    sender_counts: dict[str, dict] = defaultdict(lambda: {"display_name": "", "count": 0})
+    
+    for content_type in ["events", "courses", "blogs"]:
+        try:
+            collection = qdrant.get_collection_name(content_type)
+            if not collection:
+                continue
+            
+            # Scroll through all points to get sender info
+            offset = None
+            while True:
+                batch, next_offset = qdrant.client.scroll(
+                    collection_name=collection,
+                    limit=100,
+                    offset=offset,
+                    with_payload=["source_sender", "source_sender_email"]
+                )
+                
+                for point in batch:
+                    email = point.payload.get("source_sender_email", "")
+                    name = point.payload.get("source_sender", "")
+                    
+                    if email:
+                        email_lower = email.lower()
+                        sender_counts[email_lower]["count"] += 1
+                        # Keep the display name (prefer non-empty)
+                        if name and not sender_counts[email_lower]["display_name"]:
+                            sender_counts[email_lower]["display_name"] = name
+                
+                if next_offset is None or len(batch) < 100:
+                    break
+                offset = next_offset
+                    
+        except Exception as e:
+            logger.warning(f"Error fetching senders from {content_type}: {e}")
+            continue
+    
+    # Convert to list and sort by count
+    senders = [
+        SenderInfo(
+            email=email,
+            display_name=data["display_name"] or _extract_name_from_email(email),
+            count=data["count"]
+        )
+        for email, data in sender_counts.items()
+    ]
+    
+    # Sort by count descending
+    senders.sort(key=lambda x: x.count, reverse=True)
+    
+    return SendersResponse(
+        senders=senders,
+        total=len(senders)
+    )
+
+
+def _extract_name_from_email(email: str) -> str:
+    """
+    Extract a readable name from an email address.
+    
+    Examples:
+    - "newsletter@aiweekly.co" → "Aiweekly"
+    - "hello@techcrunch.com" → "Techcrunch"
+    """
+    if not email or "@" not in email:
+        return email or "Unknown"
+    
+    # Get domain without TLD
+    domain = email.split("@")[1].split(".")[0]
+    
+    # Capitalize and clean up
+    return domain.replace("-", " ").replace("_", " ").title()
 
 
 @router.get("/by-type/{item_type}", response_model=FeedResponse)

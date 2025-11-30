@@ -88,6 +88,10 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-007: Filter by Sender**
+  - Backend: `/api/feed/senders` endpoint with display names and counts
+  - Frontend: SenderDropdown component with search and multi-select
+  - Feed API updated to filter by sender emails
 - ✅ **F-006: Micro-animations & Polish**
   - Added 10+ animation keyframes (fadeIn, slideUp, scaleIn, popIn, bounce, etc.)
   - Utility classes: hover-lift, hover-scale, stagger-children, press-effect

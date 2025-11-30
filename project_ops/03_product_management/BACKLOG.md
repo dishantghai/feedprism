@@ -35,6 +35,9 @@ Frontend metrics panel showing precision@k, latency, extraction counts, and pipe
 
 ## Completed
 
+#### ✅ F-007: Filter by Sender (Nov 30, 2025)
+Sender dropdown in FilterBar with search, multi-select, display names, and item counts.
+
 #### ✅ F-006: Micro-animations & Polish (Nov 30, 2025)
 Hover effects, staggered list animations, modal transitions, reduced motion support.
 

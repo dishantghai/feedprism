@@ -44,10 +44,22 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 // Feed API
 // =============================================================================
 
+export interface SenderInfo {
+    email: string;
+    display_name: string;
+    count: number;
+}
+
+export interface SendersResponse {
+    senders: SenderInfo[];
+    total: number;
+}
+
 export async function getFeed(
     page = 1,
     pageSize = 20,
-    types?: ItemType[]
+    types?: ItemType[],
+    senders?: string[]
 ): Promise<FeedResponse> {
     const params = new URLSearchParams({
         page: String(page),
@@ -58,7 +70,15 @@ export async function getFeed(
         params.set('types', types.join(','));
     }
 
+    if (senders && senders.length > 0) {
+        params.set('senders', senders.join(','));
+    }
+
     return fetchJson<FeedResponse>(`${API_BASE}/feed?${params}`);
+}
+
+export async function getSenders(): Promise<SendersResponse> {
+    return fetchJson<SendersResponse>(`${API_BASE}/feed/senders`);
 }
 
 export async function getFeedByType(
@@ -399,6 +419,7 @@ export const api = {
     getFeed,
     getFeedByType,
     getFeedItem,
+    getSenders,
 
     // Emails
     getRecentEmails,

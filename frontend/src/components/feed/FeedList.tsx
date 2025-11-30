@@ -43,6 +43,7 @@ export function FeedList({
         types: filterType ? [filterType] : [],
         status: 'any' as StatusFilter,
         sort: 'recent' as SortOption,
+        senders: [],
     });
 
     // Modal state
@@ -63,7 +64,13 @@ export function FeedList({
             if (filterType) {
                 response = await api.getFeedByType(filterType, 1, limit);
             } else {
-                response = await api.getFeed(1, limit);
+                // Use sender filter if set
+                response = await api.getFeed(
+                    1,
+                    limit,
+                    filters.types.length > 0 ? filters.types : undefined,
+                    filters.senders.length > 0 ? filters.senders : undefined
+                );
             }
             console.log('Feed response:', response);
             setItems(response.items || []);
@@ -74,7 +81,7 @@ export function FeedList({
             setLoading(false);
             setRefreshing(false);
         }
-    }, [filterType, limit]);
+    }, [filterType, limit, filters.types, filters.senders]);
 
     useEffect(() => {
         fetchFeed();
