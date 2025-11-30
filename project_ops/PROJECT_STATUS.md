@@ -42,23 +42,13 @@
 
 ## Next Priority
 
-**Create Product Backlog & Management Structure**
+**Product backlog is now active.** See `03_product_management/BACKLOG.md`
 
-1. Create `project_ops/03_product_management/` folder
-2. Create `PRODUCT_BACKLOG.md` with:
-   - Small, focused user stories
-   - Bug tracking section
-   - Feature requests
-   - Technical debt items
-3. Organize stories by priority (P0/P1/P2)
+**Current P1 Items:**
+- F-001: Metrics Dashboard Panel
+- I-001: Re-extract emails for new fields
 
-This will drive further implementation with clear, actionable items instead of large phase-based work.
-
-**Pending Frontend Work:**
-- Phase 6: Metrics Panel - Dashboard view with metrics
-- Phase 7: Polish - Animations, loading states, final touches
-
-See: `project_ops/05_implementation/implementation_plan.md` → Phase 6-7 sections
+**Workflow:** `03_product_management/WORKFLOW.md` explains the minimal AI-assisted spec-driven process.
 
 ---
 
@@ -66,6 +56,9 @@ See: `project_ops/05_implementation/implementation_plan.md` → Phase 6-7 sectio
 
 | Document | Scope | Location |
 |----------|-------|----------|
+| **Product Backlog** | Active work items | `03_product_management/BACKLOG.md` |
+| **Product Workflow** | How we work | `03_product_management/WORKFLOW.md` |
+| **Active Specs** | Items in progress | `03_product_management/specs/` |
 | **Backend Implementation Guides** | Qdrant, pipeline, extraction | `02_planning/revised_implementation_guide/Phase_0-7_*.md` |
 | **Frontend Implementation Guide** | React UI phases | `05_implementation/implementation_plan.md` |
 | **Phase 5 Enhancements** | Feed card UX + Gmail robustness | `02_planning/revised_implementation_guide/Phase_5_Enhancements.md` |
@@ -96,6 +89,10 @@ See: `project_ops/05_implementation/implementation_plan.md` → Phase 6-7 sectio
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ Created minimal Product Management System in `03_product_management/`
+  - `WORKFLOW.md` - AI-assisted spec-driven development process
+  - `BACKLOG.md` - Simple prioritized backlog (F/B/I/T items)
+  - `specs/` - Active spec files for in-progress work
 - ✅ Rename Phase 6-9 docs to non-phase names (not product phases)
   - `Phase_6_UI_Demo.md` → `UI_Demo_Guide.md`
   - `Phase_7_Final_Polish.md` → `Final_Polish_Guide.md`
