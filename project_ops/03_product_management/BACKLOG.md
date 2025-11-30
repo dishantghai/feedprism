@@ -39,6 +39,9 @@ Frontend metrics panel showing precision@k, latency, extraction counts, and pipe
 
 ## Completed
 
+#### ✅ F-015: Course View Enhancement (Nov 30, 2025)
+Provider branding, instructor/level/duration/cost display, Enroll Now CTA, View Source button.
+
 #### ✅ F-010: Search Bar Integration (Nov 30, 2025)
 Persistent SearchBar with debounced search, inherits active filters, semantic search via embeddings.
 

@@ -88,6 +88,15 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-015: Course View Enhancement**
+  - Provider branding (Coursera, Udemy, edX, etc.) with color-coded badges
+  - Instructor name with user icon
+  - Skill level badges (Beginner/Intermediate/Advanced) with color coding
+  - Duration and cost display
+  - "Enroll Now" green CTA button
+  - "View Source" button opens EmailModal
+  - What you'll learn bullet points
+  - Clickable tags for saving
 - ✅ **F-010: Search Bar Integration**
   - SearchBar component with debounced input (300ms)
   - Inherits active type/tag filters

@@ -1,5 +1,7 @@
 # F-015: Course View Enhancement
 
+**Status:** ✅ Complete (Nov 30, 2025)
+
 ## Problem
 The current Course views are minimal and don't provide enough context for users to decide if a course is worth enrolling in. They lack key details like instructor info, duration, skill level, and clear enrollment CTAs. Users can't quickly assess course value without clicking through to external sites.
 
