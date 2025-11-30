@@ -245,7 +245,7 @@ export function FeedList({
             )}
 
             {/* Feed cards */}
-            <div className="space-y-4">
+            <div className="space-y-4 stagger-children">
                 {emailGroups.map((group) => (
                     <FeedCard
                         key={group.email_id}

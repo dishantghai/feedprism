@@ -177,12 +177,14 @@ export function CommandPalette({ isOpen, onClose, onNavigate, onSelectItem }: Co
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
                 onClick={onClose}
             />
 
             {/* Modal */}
-            <div className="relative w-full max-w-xl bg-[var(--color-bg-primary)] rounded-xl shadow-2xl border border-[var(--color-border-light)] overflow-hidden">
+            <div className="relative w-full max-w-xl bg-[var(--color-bg-primary)] rounded-xl shadow-2xl border border-[var(--color-border-light)] overflow-hidden animate-scale-in"
+                style={{ boxShadow: 'var(--shadow-command)' }}
+            >
                 {/* Search Input */}
                 <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border-light)]">
                     {loading ? (

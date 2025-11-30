@@ -574,9 +574,9 @@ function BlogCard({ item, onClick, compact, showEmailAttribution }: {
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-accent-blue)] hover:underline"
+                            className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-accent-blue)] hover:underline transition-all hover:gap-2"
                         >
-                            Read article <ExternalLink className="w-3.5 h-3.5" />
+                            Read article <ExternalLink className="w-3.5 h-3.5 transition-transform hover:translate-x-0.5" />
                         </a>
                     )}
                 </div>

@@ -41,7 +41,7 @@ export function FeedCard({ emailGroup, onItemClick, onEmailClick }: FeedCardProp
     }, {} as Record<string, number>);
 
     return (
-        <div className="bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-border-light)] overflow-hidden">
+        <div className="bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-border-light)] overflow-hidden hover-lift">
             {/* Email Header */}
             <div
                 onClick={() => onEmailClick?.(emailGroup)}

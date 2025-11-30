@@ -53,17 +53,18 @@ function NavItem({ icon, label, count, isActive, onClick }: NavItemProps) {
         <button
             onClick={onClick}
             className={cn(
-                'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors duration-100',
-                'hover:bg-[var(--color-sidebar-hover)]',
+                'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all duration-150',
+                'hover:bg-[var(--color-sidebar-hover)] hover:translate-x-0.5',
+                'active:scale-[0.98]',
                 isActive
                     ? 'bg-[var(--color-sidebar-active)] text-white'
                     : 'text-[var(--color-sidebar-text)]'
             )}
         >
-            <span className="w-4 h-4 flex-shrink-0">{icon}</span>
+            <span className="w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-110">{icon}</span>
             <span className="flex-1 text-left truncate">{label}</span>
             {count !== undefined && count > 0 && (
-                <span className="text-xs text-[var(--color-sidebar-text-muted)] bg-[var(--color-sidebar-hover)] px-1.5 py-0.5 rounded">
+                <span className="text-xs text-[var(--color-sidebar-text-muted)] bg-[var(--color-sidebar-hover)] px-1.5 py-0.5 rounded transition-colors">
                     {count}
                 </span>
             )}

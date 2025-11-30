@@ -61,12 +61,12 @@ export function DetailModal({ item, emailGroup, onClose, onItemClick }: DetailMo
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeIn"
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
                 onClick={onClose}
             />
 
             {/* Modal */}
-            <div className="relative w-full max-w-2xl max-h-[85vh] bg-[var(--color-bg-primary)] rounded-2xl shadow-2xl overflow-hidden animate-slideUp">
+            <div className="relative w-full max-w-2xl max-h-[85vh] bg-[var(--color-bg-primary)] rounded-2xl shadow-2xl overflow-hidden animate-pop-in">
                 {/* Header */}
                 <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-[var(--color-bg-primary)] border-b border-[var(--color-border-light)]">
                     <div className="flex items-center gap-3">

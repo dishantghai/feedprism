@@ -88,6 +88,11 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-006: Micro-animations & Polish**
+  - Added 10+ animation keyframes (fadeIn, slideUp, scaleIn, popIn, bounce, etc.)
+  - Utility classes: hover-lift, hover-scale, stagger-children, press-effect
+  - Applied to FeedCard, DetailModal, CommandPalette, Sidebar
+  - Reduced motion support for accessibility
 - ✅ **F-005: Loading States & Skeleton UI**
   - Created reusable skeleton components in `components/ui/Skeleton.tsx`
   - Components: FeedCard, EmailItem, Metrics, BlogCard, DetailModal skeletons

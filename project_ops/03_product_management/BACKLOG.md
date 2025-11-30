@@ -13,10 +13,6 @@ Priority: P1
 Frontend metrics panel showing precision@k, latency, extraction counts, and pipeline health.
 
 
-#### F-006: Micro-animations & Polish
-Priority: P2
-Subtle transitions, hover effects, and visual polish for production-ready feel.
-
 ---
 
 ### Bugs
@@ -38,6 +34,9 @@ Subtle transitions, hover effects, and visual polish for production-ready feel.
 ---
 
 ## Completed
+
+#### ✅ F-006: Micro-animations & Polish (Nov 30, 2025)
+Hover effects, staggered list animations, modal transitions, reduced motion support.
 
 #### ✅ F-005: Loading States & Skeleton UI (Nov 30, 2025)
 Reusable skeleton components (FeedCard, EmailItem, Metrics, BlogCard, DetailModal) with shimmer animation.
