@@ -320,6 +320,6 @@ git tag feedprism-phase-5-complete
 
 ## Phase 5 Complete! 🎉
 
-**Next Step:** **[Phase 6: UI & Demo](Phase_6_UI_Demo.md)**
+**Next Step:** **[UI & Demo Guide](UI_Demo_Guide.md)**
 
 ---

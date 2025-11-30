@@ -1,6 +1,6 @@
 # FeedPrism Project Status
 
-**Last Updated:** Nov 29, 2025
+**Last Updated:** Nov 30, 2025
 
 ---
 
@@ -31,23 +31,32 @@
 | Phase 6: Metrics Panel | 🔲 Not Started | Dashboard view with metrics |
 | Phase 7: Polish | 🔲 Not Started | Animations, loading states, final touches |
 
-### Submission
+### Submission & Post-Hackathon
 
 | Item | Status | Description |
 |------|--------|-------------|
-| Phase 8: Hackathon Submission | 🔲 Not Started | README, demo video, submission form |
-| Phase 9: Spayce Integration | 🔲 Not Started | Flutter integration (post-hackathon) |
+| Hackathon Submission | 🔲 Not Started | README, demo video, submission form |
+| Spayce Integration | 🔲 Not Started | Flutter integration (post-hackathon) |
 
 ---
 
 ## Next Priority
 
-**Frontend Phase 6: Metrics Panel** or **Phase 7: Polish**
+**Create Product Backlog & Management Structure**
 
-Remaining work:
-- Metrics dashboard with charts and stats visualization
-- Loading state animations
-- Final UI polish and transitions
+1. Create `project_ops/03_product_management/` folder
+2. Create `PRODUCT_BACKLOG.md` with:
+   - Small, focused user stories
+   - Bug tracking section
+   - Feature requests
+   - Technical debt items
+3. Organize stories by priority (P0/P1/P2)
+
+This will drive further implementation with clear, actionable items instead of large phase-based work.
+
+**Pending Frontend Work:**
+- Phase 6: Metrics Panel - Dashboard view with metrics
+- Phase 7: Polish - Animations, loading states, final touches
 
 See: `project_ops/05_implementation/implementation_plan.md` → Phase 6-7 sections
 
@@ -60,8 +69,8 @@ See: `project_ops/05_implementation/implementation_plan.md` → Phase 6-7 sectio
 | **Backend Implementation Guides** | Qdrant, pipeline, extraction | `02_planning/revised_implementation_guide/Phase_0-7_*.md` |
 | **Frontend Implementation Guide** | React UI phases | `05_implementation/implementation_plan.md` |
 | **Phase 5 Enhancements** | Feed card UX + Gmail robustness | `02_planning/revised_implementation_guide/Phase_5_Enhancements.md` |
-| **Hackathon Submission Guide** | README, video, deployment | `02_planning/revised_implementation_guide/Phase_8_Hackathon_Submission_Guide.md` |
-| **Spayce Integration Guide** | Flutter code, post-hackathon | `02_planning/revised_implementation_guide/Phase_9_Spayce_Integration_Guide.md` |
+| **Hackathon Submission Guide** | README, video, deployment | `02_planning/revised_implementation_guide/Hackathon_Submission_Guide.md` |
+| **Spayce Integration Guide** | Flutter code, post-hackathon | `02_planning/revised_implementation_guide/Spayce_Integration_Guide.md` |
 
 ---
 
@@ -87,6 +96,11 @@ See: `project_ops/05_implementation/implementation_plan.md` → Phase 6-7 sectio
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ Rename Phase 6-9 docs to non-phase names (not product phases)
+  - `Phase_6_UI_Demo.md` → `UI_Demo_Guide.md`
+  - `Phase_7_Final_Polish.md` → `Final_Polish_Guide.md`
+  - `Phase_8_Hackathon_Submission_Guide.md` → `Hackathon_Submission_Guide.md`
+  - `Phase_9_Spayce_Integration_Guide.md` → `Spayce_Integration_Guide.md`
 - ✅ Fix stale fetch lock issue (429 errors after server restart)
   - Auto-reset lock after 2 minute timeout
   - Added `/api/pipeline/reset-fetch-lock` endpoint for manual reset

@@ -429,4 +429,4 @@ git commit -m "feat: Enhance feed cards with richer data and improve extraction 
 ## Phase 5 Enhancements Complete! 🎉
 
 **Builds on:** Phase 5 Advanced Features (Discovery API, Scroll API, Analytics)
-**Next:** [Phase 6: UI & Demo](Phase_6_UI_Demo.md)
+**Next:** [UI & Demo Guide](UI_Demo_Guide.md)

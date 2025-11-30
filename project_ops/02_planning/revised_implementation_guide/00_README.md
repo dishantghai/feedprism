@@ -16,8 +16,10 @@ This directory contains **comprehensive, production-ready implementation guides*
 | **[Phase 3](Phase_3_Hybrid_Search.md)** | Hybrid Search & Payload Filtering | 6-8 hours | Phase 2 complete |
 | **[Phase 4](Phase_4_Qdrant_Enhancements.md)** | Advanced Qdrant Features (Multi-Collection, Named Vectors, Grouping API) | 8-10 hours | Phase 3 complete |
 | **[Phase 5](Phase_5_Advanced_Features.md)** | Discovery API, Scroll API, Analytics, Benchmarking | 8-10 hours | Phase 4 complete |
-| **[Phase 6](Phase_6_UI_Demo.md)** | Frontend UI, Metrics Dashboard, README | 8-10 hours | Phase 5 complete |
-| **[Phase 7](Phase_7_Submission.md)** | Final Polish, Video, Submission | 4-6 hours | Phase 6 complete |
+| **[UI Demo Guide](UI_Demo_Guide.md)** | Frontend UI, Metrics Dashboard, README | 8-10 hours | Phase 5 complete |
+| **[Final Polish Guide](Final_Polish_Guide.md)** | Final Polish, Video, Submission | 4-6 hours | UI Demo complete |
+| **[Hackathon Submission Guide](Hackathon_Submission_Guide.md)** | README, demo video, submission form | 4-6 hours | Final Polish complete |
+| **[Spayce Integration Guide](Spayce_Integration_Guide.md)** | Flutter integration (post-hackathon) | TBD | Post-hackathon |
 
 **Total Estimated Time:** 57-74 hours  
 **Available Time:** ~138 hours until Nov 30, 12 PM IST  
