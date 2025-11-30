@@ -43,6 +43,9 @@ Subtle transitions, hover effects, and visual polish for production-ready feel.
 
 ## Completed
 
+#### ✅ F-004: Blog View Enhancement (Nov 30, 2025)
+Full blog cards in email view (not compact), detail modal with featured image, hook, key takeaways.
+
 #### ✅ I-001: Re-extract Existing Emails (Nov 30, 2025)
 Added `/api/pipeline/re-extract` endpoint to re-process emails with new extraction logic (hook, image_url, etc.).
 

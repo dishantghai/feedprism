@@ -1,5 +1,7 @@
 # F-004: Blog View Enhancement
 
+**Status:** ✅ Complete (Nov 30, 2025)
+
 ## Problem
 The current Blog view in the Recent Extraction screen displays a small thumbnail and a truncated description. Users cannot see the blog image clearly, and the limited copy reduces engagement and click‑through rates.
 

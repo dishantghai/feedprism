@@ -390,7 +390,9 @@ function BlogCard({ item, onClick, compact, showEmailAttribution }: {
     showEmailAttribution: boolean;
 }) {
     const domain = extractDomain(item.url);
-    const displayText = item.hook || item.description;
+    // Hook and description are now displayed separately for better engagement
+    const hookText = item.hook;
+    const descriptionText = item.description;
 
     // Generate subtle background color based on category
     const categoryColors: Record<string, string> = {
@@ -443,13 +445,14 @@ function BlogCard({ item, onClick, compact, showEmailAttribution }: {
             onClick={onClick}
             className={`rounded-xl border ${cardColor} hover:shadow-lg transition-all cursor-pointer group overflow-hidden`}
         >
-            {/* Featured Image - prominent display */}
+            {/* Featured Image - prominent display (≥200px height per F-004) */}
             {item.image_url && (
-                <div className="relative w-full h-48 overflow-hidden bg-gray-100">
+                <div className="relative w-full h-52 overflow-hidden bg-gray-100">
                     <img
                         src={item.image_url}
                         alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 animate-fade-in"
+                        loading="lazy"
                         onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }}
                     />
                     {/* Gradient overlay for better text readability if needed */}
@@ -497,10 +500,17 @@ function BlogCard({ item, onClick, compact, showEmailAttribution }: {
                     {item.title}
                 </h3>
 
-                {/* Hook/Description - more lines for better engagement */}
-                {displayText && (
-                    <p className="text-sm text-[var(--color-text-secondary)] line-clamp-4 mb-4 leading-relaxed">
-                        {displayText}
+                {/* Hook - bold italic tagline for engagement (F-004) */}
+                {hookText && (
+                    <p className="text-sm font-semibold italic text-[var(--color-text-primary)] mb-2 line-clamp-2">
+                        "{hookText}"
+                    </p>
+                )}
+
+                {/* Description - up to 3 lines with ellipsis */}
+                {descriptionText && (
+                    <p className="text-sm text-[var(--color-text-secondary)] line-clamp-3 mb-4 leading-relaxed">
+                        {descriptionText}
                     </p>
                 )}
 

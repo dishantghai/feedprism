@@ -88,6 +88,10 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-004: Blog View Enhancement**
+  - Full blog cards in email view (not compact like events/courses)
+  - Detail modal: featured image, hook with accent border, key takeaways section
+  - Author title and reading time in blog meta
 - ✅ **I-001: Re-extract Existing Emails**
   - Added `/api/pipeline/re-extract` endpoint to re-process emails with new logic
   - Added `/api/pipeline/processed-emails` endpoint to list processed email IDs

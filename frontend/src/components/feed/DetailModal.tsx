@@ -142,6 +142,23 @@ function ItemDetail({ item }: { item: FeedItem }) {
 
     return (
         <div className="space-y-6">
+            {/* Blog Featured Image - prominent display at top (F-004) */}
+            {item.item_type === 'blog' && item.image_url && (
+                <div className="relative w-full h-52 rounded-xl overflow-hidden bg-gray-100 -mt-2">
+                    <img
+                        src={item.image_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover animate-fade-in"
+                        onError={(e) => { e.currentTarget.parentElement!.style.display = 'none'; }}
+                    />
+                    {item.category && (
+                        <span className="absolute top-3 left-3 text-xs font-medium px-2.5 py-1 rounded-full bg-white/90 text-[var(--color-text-secondary)] shadow-sm">
+                            {item.category}
+                        </span>
+                    )}
+                </div>
+            )}
+
             {/* Title */}
             <h1 className="text-2xl font-semibold text-[var(--color-text-primary)] leading-tight">
                 {item.title}
@@ -187,7 +204,7 @@ function ItemDetail({ item }: { item: FeedItem }) {
                         {item.author && (
                             <div className="flex items-center gap-2">
                                 <User className="w-4 h-4" style={{ color: typeColor }} />
-                                <span>{item.author}</span>
+                                <span>{item.author}{item.author_title && ` · ${item.author_title}`}</span>
                             </div>
                         )}
                         {item.source && (
@@ -196,9 +213,22 @@ function ItemDetail({ item }: { item: FeedItem }) {
                                 <span>{item.source}</span>
                             </div>
                         )}
+                        {item.reading_time && (
+                            <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4" style={{ color: typeColor }} />
+                                <span>{item.reading_time}</span>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
+
+            {/* Blog Hook - bold italic tagline (F-004) */}
+            {item.item_type === 'blog' && item.hook && (
+                <p className="text-base font-semibold italic text-[var(--color-text-primary)] border-l-4 border-[var(--color-prism-start)] pl-4 py-2 bg-[var(--color-bg-tertiary)] rounded-r-lg">
+                    "{item.hook}"
+                </p>
+            )}
 
             {/* Description */}
             {item.description && (
@@ -206,6 +236,21 @@ function ItemDetail({ item }: { item: FeedItem }) {
                     <p className="text-[var(--color-text-secondary)] leading-relaxed whitespace-pre-wrap">
                         {item.description}
                     </p>
+                </div>
+            )}
+
+            {/* Blog Key Points (F-004) */}
+            {item.item_type === 'blog' && item.key_points && item.key_points.length > 0 && (
+                <div className="space-y-2">
+                    <h3 className="text-sm font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide">Key Takeaways</h3>
+                    <ul className="space-y-2">
+                        {item.key_points.map((point, index) => (
+                            <li key={index} className="flex items-start gap-2 text-sm text-[var(--color-text-secondary)]">
+                                <span className="text-[var(--color-prism-start)] font-bold mt-0.5">→</span>
+                                <span>{point}</span>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             )}
 

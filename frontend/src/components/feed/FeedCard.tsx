@@ -92,14 +92,14 @@ export function FeedCard({ emailGroup, onItemClick, onEmailClick }: FeedCardProp
                 </div>
             </div>
 
-            {/* Content Items - always compact inside FeedCard since email context is already shown */}
-            <div className="p-3 space-y-2">
+            {/* Content Items - blogs get full cards for better engagement, others stay compact */}
+            <div className="p-3 space-y-3">
                 {visibleItems.map((item) => (
                     <ExtractedItemCard
                         key={item.id}
                         item={item}
                         onClick={() => onItemClick?.(item)}
-                        compact={true}
+                        compact={item.item_type !== 'blog'}
                         showEmailAttribution={false}
                     />
                 ))}
