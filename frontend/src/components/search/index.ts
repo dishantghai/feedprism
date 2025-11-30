@@ -6,4 +6,5 @@
 
 export { CommandPalette } from './CommandPalette';
 export { FilterBar } from './FilterBar';
+export { SearchBar } from './SearchBar';
 export type { FilterState, StatusFilter, SortOption } from './FilterBar';

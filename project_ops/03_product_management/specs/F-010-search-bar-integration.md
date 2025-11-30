@@ -1,4 +1,6 @@
-# F-005: Search Bar Integration
+# F-010: Search Bar Integration
+
+**Status:** ✅ Complete (Nov 30, 2025)
 
 ## Problem
 The current UI has a Command Bar (⌘K) for quick navigation and filter selections, but there is no dedicated Search Bar placed below it. Users must type queries directly into the Command Bar, which mixes navigation with search and does not preserve the selected filters.

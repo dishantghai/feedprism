@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Inbox, RefreshCw, AlertCircle } from 'lucide-react';
 import { FeedCard, type EmailGroup } from './FeedCard';
 import { DetailModal } from './DetailModal';
-import { FilterBar, type FilterState, type StatusFilter, type SortOption } from '../search';
+import { FilterBar, SearchBar, type FilterState, type StatusFilter, type SortOption } from '../search';
 import { QuickTagBar } from '../tags';
 import { FeedCardSkeleton } from '../ui';
 import { api } from '../../services/api';
@@ -89,6 +89,22 @@ export function FeedList({
     const [selectedItem, setSelectedItem] = useState<FeedItem | null>(null);
     const [selectedEmailGroup, setSelectedEmailGroup] = useState<EmailGroup | null>(null);
 
+    // Search state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<FeedItem[] | null>(null);
+
+    // Handle search results
+    const handleSearchResults = useCallback((results: FeedItem[], query: string) => {
+        setSearchQuery(query);
+        setSearchResults(results);
+    }, []);
+
+    // Clear search
+    const handleSearchClear = useCallback(() => {
+        setSearchQuery('');
+        setSearchResults(null);
+    }, []);
+
     // Fetch feed data
     const fetchFeed = useCallback(async (isRefresh = false) => {
         if (isRefresh) {
@@ -168,13 +184,29 @@ export function FeedList({
         return result;
     }, [items, savedTags, allTagsWithCounts]);
 
-    // Apply filters to items
+    // Apply filters to items (also applies to search results)
     const filteredItems = useMemo(() => {
-        let result = [...items];
+        // Start with search results if available, otherwise use feed items
+        let result = searchResults !== null ? [...searchResults] : [...items];
 
         // Type filter (if not locked by filterType prop)
         if (!filterType && filters.types.length > 0) {
             result = result.filter(item => filters.types.includes(item.item_type));
+        }
+
+        // Tag filter (for non-search results, search already filters by tags)
+        if (searchResults === null && filters.tags.length > 0) {
+            result = result.filter(item =>
+                item.tags?.some(tag => filters.tags.includes(tag))
+            );
+        }
+
+        // Sender filter
+        if (filters.senders.length > 0) {
+            const senderSet = new Set(filters.senders.map(s => s.toLowerCase()));
+            result = result.filter(item =>
+                senderSet.has((item.sender_email || '').toLowerCase())
+            );
         }
 
         // Status filter (upcoming/past for events)
@@ -187,14 +219,13 @@ export function FeedList({
             });
         }
 
-        // Sort
-        if (filters.sort === 'recent') {
+        // Sort - keep relevance order for search, otherwise sort by date
+        if (searchResults === null && filters.sort === 'recent') {
             result.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
         }
-        // 'relevance' sort would require score from search API
 
         return result;
-    }, [items, filters, filterType]);
+    }, [items, filters, filterType, searchResults]);
 
     // Group items by email
     const emailGroups = useMemo(() => {
@@ -343,6 +374,17 @@ export function FeedList({
                     onClearAll={clearTagFilters}
                 />
             )}
+
+            {/* Search Bar - below filters and tags so it respects them */}
+            <SearchBar
+                activeTypes={filters.types}
+                activeTags={filters.tags}
+                activeSenders={filters.senders}
+                onResults={handleSearchResults}
+                onClear={handleSearchClear}
+                placeholder={searchQuery ? `Searching: "${searchQuery}"` : 'Search events, courses, articles...'}
+                className="mb-3"
+            />
 
             {/* Feed cards */}
             <div className="space-y-4 stagger-children">

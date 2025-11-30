@@ -39,6 +39,9 @@ Frontend metrics panel showing precision@k, latency, extraction counts, and pipe
 
 ## Completed
 
+#### ✅ F-010: Search Bar Integration (Nov 30, 2025)
+Persistent SearchBar with debounced search, inherits active filters, semantic search via embeddings.
+
 #### ✅ F-013: Saved Tags & Tag-Based Filtering (Nov 30, 2025)
 ClickableTag on cards, QuickTagBar with saved/frequent tags, localStorage persistence, remove tags, backend filtering.
 

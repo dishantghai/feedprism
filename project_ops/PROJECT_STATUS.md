@@ -88,6 +88,12 @@
 ## Recent Changes
 
 ### Nov 30, 2025
+- ✅ **F-010: Search Bar Integration**
+  - SearchBar component with debounced input (300ms)
+  - Inherits active type/tag filters
+  - Uses semantic search via embeddings API
+  - Shows loading spinner while searching
+  - Keyboard shortcuts: Escape to clear, ⌘K to focus
 - ✅ **F-013: Saved Tags & Tag-Based Filtering**
   - Frontend: ClickableTag component on content cards (click to save)
   - Frontend: QuickTagBar shows saved tags first, then frequent tags
