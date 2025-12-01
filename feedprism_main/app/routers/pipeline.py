@@ -187,8 +187,8 @@ def get_unprocessed_emails(
         # Fetch recent emails from Gmail
         # Convert hours to days (minimum 1 day for Gmail API)
         days_back = max(1, hours // 24 + 1)
-        # Limit to 15 emails for faster response and fewer SSL issues
-        raw_emails = gmail.fetch_content_rich_emails(days_back=days_back, max_results=15)
+        # Limit to 25 emails for faster response and fewer SSL issues
+        raw_emails = gmail.fetch_content_rich_emails(days_back=days_back, max_results=25)
         
         # If we got some emails, continue even if there were some failures
         if not raw_emails:
