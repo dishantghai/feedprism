@@ -115,8 +115,13 @@
 ### Dec 1, 2025
 - ✅ **Qdrant Client Fixes**
   - Added `https=False` to QdrantClient to fix SSL errors in Docker
-  - Added `is_email_processed()` method for deduplication checks
   - Fixes "SSL record layer failure" when connecting to Qdrant with API key
+
+- ✅ **LAMATIC-000: Prevent Duplicate Email Processing**
+  - Added `is_email_processed(email_id: str) -> bool` method to QdrantService
+  - Checks all 3 collections (events, courses, blogs) for existing email ID
+  - Uses efficient scroll with filter (limit=1, no payload/vectors)
+  - Ready for use in Lamatic API router (LAMATIC-003)
 
 - ✅ **F-018: Deployment Infrastructure & Qdrant Security**
   - **Comprehensive Deployment Guide:**

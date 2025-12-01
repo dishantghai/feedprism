@@ -541,6 +541,7 @@ class QdrantService:
                 deleted_counts[content_type] = 0
         
         return deleted_counts
+
     def is_email_processed(self, email_id: str) -> bool:
         """
         Check if an email has already been processed by querying all collections.
