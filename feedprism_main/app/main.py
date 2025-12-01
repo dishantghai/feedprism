@@ -5,6 +5,7 @@ from app.services.analytics import AnalyticsService
 from app.routers import feed_router, emails_router, search_router, metrics_router
 from app.routers.pipeline import router as pipeline_router
 from app.routers.demo import router as demo_router, _demo_mode_enabled
+from app.routers.lamatic_bridge import router as lamatic_router
 from app.config import settings
 
 # Log demo mode status on startup
@@ -39,6 +40,7 @@ app.include_router(search_router)
 app.include_router(metrics_router)
 app.include_router(pipeline_router)
 app.include_router(demo_router)
+app.include_router(lamatic_router)
 
 # Initialize services
 # We initialize them here to be reused across requests

@@ -44,5 +44,23 @@ services:
       - backend
     restart: unless-stopped
 
+  lamatic-bridge:
+    build:
+      context: ./lamatic_bridge
+      dockerfile: Dockerfile
+    container_name: feedprism-lamatic-bridge
+    ports:
+      - "8001:8001"
+    environment:
+      - FEEDPRISM_URL=http://backend:8000
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - BRIDGE_PORT=8001
+    depends_on:
+      - backend
+      - qdrant
+    restart: unless-stopped
+
 volumes:
   qdrant_data:
