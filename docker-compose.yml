@@ -1,26 +1,16 @@
-version: '3.8'
-
 services:
-  # Qdrant Vector Database (with API key authentication)
   qdrant:
     image: qdrant/qdrant:latest
     container_name: feedprism-qdrant
     ports:
-      - "6333:6333" # REST API
-      - "6334:6334" # gRPC
+      - "6333:6333"
+      - "6334:6334"
     environment:
-      # API key for authentication (required for external access)
-      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-}
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
     volumes:
       - qdrant_data:/qdrant/storage
     restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:6333/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # FastAPI Backend
   backend:
     build:
       context: ./feedprism_main
@@ -31,24 +21,18 @@ services:
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
-      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - DEMO_MODE=${DEMO_MODE:-true}
       - DEMO_USER_NAME=${DEMO_USER_NAME:-Demo User}
       - DEMO_USER_EMAIL=${DEMO_USER_EMAIL:-demo@feedprism.app}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
-      # Persist data directory
       - ./feedprism_main/data:/app/data
-      # Mount credentials for Gmail API (if needed, optional)
-      - ./feedprism_main/credentials.json:/app/credentials.json:ro
-      - ./feedprism_main/token.json:/app/token.json:ro
     depends_on:
-      qdrant:
-        condition: service_healthy
+      - qdrant
     restart: unless-stopped
 
-  # React Frontend (with nginx)
   frontend:
     build:
       context: ./frontend
