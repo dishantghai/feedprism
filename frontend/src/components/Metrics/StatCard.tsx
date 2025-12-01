@@ -16,7 +16,7 @@ const StatCard: React.FC<StatCardProps> = ({
     trend,
     trendValue,
     icon,
-    color = 'default'
+    color: _color = 'default'
 }) => {
     const getTrendIcon = () => {
         switch (trend) {
