@@ -1,10 +1,11 @@
 # FeedPrism Demo Video Script
 ## Memory Over Models — AI Hackathon Submission
 
-**Target Duration:** 3-4 minutes  
+**Target Duration:** 5-6 minutes  
 **Format:** Screen recording with voiceover  
 **Theme:** Unstructured Data RAG Challenge  
-**Primary Sponsor:** Qdrant
+**Primary Sponsor:** Qdrant  
+**Secondary Sponsor:** Lamatic (optional integration)
 
 ---
 
@@ -14,40 +15,59 @@ This script includes **every click, every screen, and every word** you'll speak.
 
 ---
 
-## SCENE 1: TERMINAL SETUP (0:00 - 0:20)
+## SCENE 1: DOCKER COMPOSE SETUP (0:00 - 0:30)
 
 ### Screen Actions:
-1. Open Terminal with split panes (left: backend, right: frontend)
-2. In left terminal, show the command being typed
-3. In right terminal, show the command being typed
-4. Wait for both servers to start
+1. Open Terminal
+2. Navigate to the project root directory
+3. Show the `docker-compose.yml` file briefly (optional)
+4. Run `docker compose up`
+5. Wait for all 4 services to start
 
 ### What You Type:
 ```bash
-# Left terminal
-cd feedprism_main
-uv run uvicorn app.main:app --reload --port 8000
+# Single command to start everything
+docker compose up -d
 
-# Right terminal  
-cd frontend
-npm run dev
+# Or with build (first time)
+docker compose up --build -d
+```
+
+### What You See in Terminal:
+```
+[+] Running 4/4
+ ✔ Container feedprism-qdrant         Started
+ ✔ Container feedprism-backend        Started
+ ✔ Container feedprism-frontend       Started
+ ✔ Container feedprism-lamatic-bridge Started
 ```
 
 ### Narration:
 > "Welcome to FeedPrism — an intelligent email intelligence system built for the Memory Over Models hackathon.
 > 
-> Let me start by spinning up our backend — a FastAPI server running on port 8000 — and our React frontend on port 5173.
+> FeedPrism runs as a complete Docker stack with four services. Let me start everything with a single command: `docker compose up`.
 > 
-> The backend connects to Qdrant, our vector database, which is the core of FeedPrism's memory system.
+> [Wait for containers to start]
 > 
-> Both servers are up. Let's open the app."
+> Here we go — four containers spinning up:
+> - **Qdrant** — our vector database with API key authentication
+> - **Backend** — FastAPI server handling extraction and search
+> - **Frontend** — React app served via Nginx on port 80
+> - **Lamatic Bridge** — webhook receiver for Lamatic AI integration
+> 
+> All services are connected. Qdrant is the memory backbone. Let's open the app."
 
 ---
 
-## SCENE 2: OPENING THE APP — DEMO MODE BANNER (0:20 - 0:35)
+### Architecture Note (mention verbally):
+> "This is production-ready architecture. Qdrant runs with persistent storage and API key authentication. The backend connects securely using the same API key. Everything is containerized and reproducible."
+
+---
+
+## SCENE 2: OPENING THE APP — DEMO MODE BANNER (0:30 - 0:50)
 
 ### Screen Actions:
-1. Open browser to `http://localhost:5173`
+1. Open browser to `http://localhost` (port 80 via Nginx)
 2. Point out the **"Demo Mode"** banner at the top
 3. Show the sidebar with navigation items
 4. Point to the "Home" view being active
@@ -58,9 +78,9 @@ npm run dev
 - Main content area with Prism Overview section
 
 ### Narration:
-> "Here's FeedPrism running in demo mode. You'll see this banner at the top indicating we're using pre-loaded sample data.
+> "Here's FeedPrism running in demo mode at localhost port 80. The frontend is served via Nginx for production-like performance.
 > 
-> We've implemented full Gmail OAuth integration, but for this hackathon demo, we're using dummy newsletters to simplify the judging experience and avoid authentication complexity.
+> You'll see this banner at the top indicating we're using pre-loaded sample data. We've implemented full Gmail OAuth integration, but for this hackathon demo, we're using curated newsletters to simplify the judging experience.
 > 
 > On the left, you see our sidebar — Home, Events, Courses, Blogs, Metrics, and Settings. Each represents a different view of the same Qdrant-backed data.
 > 
@@ -68,7 +88,7 @@ npm run dev
 
 ---
 
-## SCENE 3: PRISM OVERVIEW — THE PROBLEM (0:35 - 1:00)
+## SCENE 3: PRISM OVERVIEW — THE PROBLEM (0:50 - 1:20)
 
 ### Screen Actions:
 1. Scroll to the **Prism Overview** section
@@ -98,7 +118,7 @@ npm run dev
 
 ---
 
-## SCENE 4: EXTRACTION IN ACTION (1:00 - 1:40)
+## SCENE 4: EXTRACTION IN ACTION (1:20 - 2:00)
 
 ### Screen Actions:
 1. Click the **"Extract Content"** button
@@ -141,7 +161,7 @@ npm run dev
 
 ---
 
-## SCENE 5: THE MAIN FEED — QDRANT MULTI-COLLECTION (1:40 - 2:15)
+## SCENE 5: THE MAIN FEED — QDRANT MULTI-COLLECTION (2:00 - 2:40)
 
 ### Screen Actions:
 1. Scroll down to the **Feed** section below the Prism Overview
@@ -171,7 +191,7 @@ npm run dev
 
 ---
 
-## SCENE 6: FILTER BAR — PAYLOAD FILTERING (2:15 - 2:50)
+## SCENE 6: FILTER BAR — PAYLOAD FILTERING (2:40 - 3:15)
 
 ### Screen Actions:
 1. Click on the **Filter Bar** area
@@ -217,7 +237,7 @@ npm run dev
 
 ---
 
-## SCENE 7: SEMANTIC SEARCH — HYBRID SEARCH WITH RRF (2:50 - 3:30)
+## SCENE 7: SEMANTIC SEARCH — HYBRID SEARCH WITH RRF (3:15 - 4:00)
 
 ### Screen Actions:
 1. Click on the **Search Bar** (or press Cmd+K to open command palette)
@@ -259,7 +279,7 @@ npm run dev
 
 ---
 
-## SCENE 8: SOURCE TRACEABILITY — ZERO HALLUCINATION (3:30 - 4:00)
+## SCENE 8: SOURCE TRACEABILITY — ZERO HALLUCINATION (4:00 - 4:30)
 
 ### Screen Actions:
 1. Find any **extracted item card** in the feed
@@ -294,7 +314,7 @@ npm run dev
 
 ---
 
-## SCENE 9: EVENTS CALENDAR VIEW (4:00 - 4:25)
+## SCENE 9: EVENTS CALENDAR VIEW (4:30 - 4:55)
 
 ### Screen Actions:
 1. Click **"Events"** in the sidebar
@@ -328,7 +348,7 @@ npm run dev
 
 ---
 
-## SCENE 10: BLOGS GALLERY VIEW (4:25 - 4:45)
+## SCENE 10: BLOGS GALLERY VIEW (4:55 - 5:15)
 
 ### Screen Actions:
 1. Click **"Blogs"** in the sidebar
@@ -356,7 +376,7 @@ npm run dev
 
 ---
 
-## SCENE 11: COURSES CATALOG VIEW (4:45 - 5:05)
+## SCENE 11: COURSES CATALOG VIEW (5:15 - 5:35)
 
 ### Screen Actions:
 1. Click **"Courses"** in the sidebar
@@ -387,7 +407,7 @@ npm run dev
 
 ---
 
-## SCENE 12: METRICS DASHBOARD (5:05 - 5:25)
+## SCENE 12: METRICS DASHBOARD (5:35 - 5:55)
 
 ### Screen Actions:
 1. Click **"Metrics"** in the sidebar
@@ -417,7 +437,31 @@ npm run dev
 
 ---
 
-## SCENE 13: CLOSING — MEMORY OVER MODELS (5:25 - 5:50)
+## SCENE 13: LAMATIC BRIDGE INTEGRATION (5:55 - 6:15)
+
+### Screen Actions:
+1. Open a new terminal tab
+2. Show the Lamatic Bridge container logs (optional)
+3. Explain the webhook architecture
+
+### What You Type (optional):
+```bash
+# View Lamatic Bridge logs
+docker logs feedprism-lamatic-bridge
+```
+
+### Narration:
+> "FeedPrism also integrates with Lamatic AI — the hackathon's secondary sponsor.
+> 
+> We've built a dedicated Lamatic Bridge service running on port 8001. When Lamatic sends a webhook with new email data, the bridge receives it and forwards it to FeedPrism for processing.
+> 
+> The bridge handles the communication layer while FeedPrism handles idempotency — if an email has already been processed, we check Qdrant using the source_email_id payload and skip duplicate processing.
+> 
+> This architecture enables real-time email processing triggered by external workflow automation tools like Lamatic."
+
+---
+
+## SCENE 14: CLOSING — MEMORY OVER MODELS (6:15 - 6:45)
 
 ### Screen Actions:
 1. Return to **Home** view
@@ -431,11 +475,22 @@ npm run dev
 > 
 > FeedPrism transforms email chaos into organized, searchable knowledge. But the key insight is this: we're not using AI to GENERATE content — we're using AI to REMEMBER and RETRIEVE it.
 > 
-> The Qdrant vector database IS the product. Every extracted event, course, and blog becomes persistent memory. Multi-collection architecture with tuned HNSW. Named vectors for multi-representation search. Hybrid dense-plus-sparse search with RRF fusion. Rich payload filtering that happens BEFORE vector search. Scroll API for analytics. Discovery API for recommendations. And source traceability for every single item.
+> The Qdrant vector database IS the product. Every extracted event, course, and blog becomes persistent memory:
+> - Multi-collection architecture with tuned HNSW parameters
+> - Named vectors for multi-representation search
+> - Hybrid dense-plus-sparse search with RRF fusion
+> - Rich payload filtering that happens BEFORE vector search
+> - Scroll API for analytics
+> - Discovery API for recommendations
+> - Source traceability for every single item
+> - API key authentication for secure access
+> - Lamatic Bridge for external workflow integration
+> 
+> All running in Docker with a single `docker compose up` command.
 > 
 > This is what 'Memory Over Models' means in practice. The best AI isn't about generating new content — it's about perfectly remembering and retrieving what already exists.
 > 
-> FeedPrism. Powered by Qdrant. Built for the Memory Over Models hackathon.
+> FeedPrism. Powered by Qdrant. Integrated with Lamatic. Built for the Memory Over Models hackathon.
 > 
 > Thank you for watching."
 
@@ -453,10 +508,12 @@ npm run dev
 | 6 | RRF Fusion | "1/(k + rank) with k=60" | 7 |
 | 7 | Payload Filtering | "BEFORE vector search" | 6 |
 | 8 | Scroll API | "Analytics dashboard" | 12 |
-| 9 | Discovery API | "Recommendations" | 13 |
-| 10 | Source Traceability | "source_email_id" | 8 |
+| 9 | Discovery API | "Recommendations" | 14 |
+| 10 | Source Traceability | "source_email_id" | 8, 13 |
 | 11 | Collection Info | "Metrics computation" | 12 |
 | 12 | DatetimeRange | "Event dates" | 9 |
+| 13 | API Key Auth | "Secure access" | 1, 14 |
+| 14 | Idempotency Check | "Skip duplicate processing" | 13 |
 
 ---
 
@@ -472,19 +529,49 @@ These phrases demonstrate Qdrant expertise. Use them naturally:
 6. **"Every point stores source_email_id — zero hallucination, full provenance"**
 7. **"BM25-style term frequency with hashing trick for sparse vectors"**
 8. **"The vector database IS the product"**
+9. **"Qdrant runs with API key authentication for secure access"**
+10. **"Idempotency check via source_email_id prevents duplicate processing"**
+11. **"Four containers, one command: docker compose up"**
 
 ---
 
 # 📋 PRE-RECORDING CHECKLIST
 
-### Environment Setup
-- [ ] Backend running: `cd feedprism_main && uv run uvicorn app.main:app --reload --port 8000`
-- [ ] Frontend running: `cd frontend && npm run dev`
-- [ ] Qdrant running: `docker run -p 6333:6333 qdrant/qdrant`
+### Environment Setup (Docker — Recommended)
+```bash
+# Create .env file in project root with:
+QDRANT_API_KEY=your_secure_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+DEMO_MODE=true
+
+# Start all services
+docker compose up --build -d
+
+# Verify all containers are running
+docker ps
+```
+- [ ] All 4 containers running: `feedprism-qdrant`, `feedprism-backend`, `feedprism-frontend`, `feedprism-lamatic-bridge`
+- [ ] Browser open to `http://localhost` (port 80)
+- [ ] Backend API accessible at `http://localhost:8000`
+- [ ] Lamatic Bridge accessible at `http://localhost:8001`
+
+### Alternative: Local Development Setup
+```bash
+# Terminal 1: Qdrant
+docker run -p 6333:6333 -e QDRANT__SERVICE__API_KEY=your_key qdrant/qdrant
+
+# Terminal 2: Backend
+cd feedprism_main
+uv run uvicorn app.main:app --reload --port 8000
+
+# Terminal 3: Frontend
+cd frontend
+npm run dev
+```
 - [ ] Browser open to `http://localhost:5173`
 
 ### Demo Data Setup
-- [ ] Demo mode automatically uses sample data
+- [ ] Demo mode automatically uses sample data (DEMO_MODE=true)
 - [ ] If needed, reset demo state via Settings or API call
 - [ ] Ensure 6 demo emails show as "unprocessed"
 
@@ -494,19 +581,19 @@ These phrases demonstrate Qdrant expertise. Use them naturally:
 - [ ] Browser at 100% zoom
 - [ ] No notifications (Do Not Disturb mode)
 - [ ] Close unnecessary tabs/apps
-- [ ] Terminal windows arranged (split panes)
+- [ ] Terminal ready to show `docker compose up` or `docker ps`
 
 ### Script Prep
 - [ ] Read through script 2-3 times
 - [ ] Practice the demo flow without recording
-- [ ] Time yourself (aim for 5-6 minutes)
+- [ ] Time yourself (aim for 6-7 minutes)
 - [ ] Note any tricky transitions
 
 ---
 
 # 📹 RECORDING SPECS
 
-- **Duration:** 5-6 minutes (comprehensive), can be cut to 3-4 if needed
+- **Duration:** 6-7 minutes (comprehensive with Docker + Lamatic)
 - **Resolution:** 1920x1080 minimum (4K preferred)
 - **Format:** MP4, H.264
 - **Audio:** Clear voiceover, no background music
@@ -519,14 +606,63 @@ These phrases demonstrate Qdrant expertise. Use them naturally:
 
 | Criteria | How We Address It |
 |----------|-------------------|
-| **Qdrant Usage** | 12 features explicitly demonstrated and explained |
-| **Technical Depth** | HNSW params, RRF formula, payload filtering explained |
+| **Qdrant Usage** | 14 features explicitly demonstrated and explained |
+| **Technical Depth** | HNSW params, RRF formula, payload filtering, API key auth |
 | **Real Problem** | Email overload — universal pain point |
-| **Production Quality** | SSE streaming, error handling, modular architecture |
+| **Production Quality** | Docker Compose, Nginx, SSE streaming, error handling |
 | **Memory Focus** | "Vector database IS the product" — retrieval, not generation |
-| **Innovation** | Hybrid search, multi-collection, source traceability |
-| **Demo Quality** | Complete walkthrough with every feature shown |
+| **Innovation** | Hybrid search, multi-collection, source traceability, idempotency |
+| **Demo Quality** | Complete walkthrough with 14 scenes covering every feature |
+| **Lamatic Integration** | Dedicated bridge service for webhook-based processing |
+| **Deployment Ready** | Single `docker compose up` starts entire stack |
 
 ---
 
-*You've got this. The technical depth is there. The product is solid. Now show the judges exactly what you built.* 🚀
+# 🐳 DOCKER ARCHITECTURE SUMMARY
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     FeedPrism Docker Stack                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────┐     ┌─────────────────┐                   │
+│  │   Frontend      │     │   Backend       │                   │
+│  │   (Nginx)       │────▶│   (FastAPI)     │                   │
+│  │   Port 80       │     │   Port 8000     │                   │
+│  └─────────────────┘     └────────┬────────┘                   │
+│                                   │                             │
+│                                   ▼                             │
+│                          ┌─────────────────┐                   │
+│                          │    Qdrant       │                   │
+│                          │  (Vector DB)    │                   │
+│                          │  Port 6333      │                   │
+│                          │  + API Key Auth │                   │
+│                          └────────▲────────┘                   │
+│                                   │                             │
+│  ┌─────────────────┐              │                             │
+│  │ Lamatic Bridge  │──────────────┘                             │
+│  │   Port 8001     │                                            │
+│  │ (Webhook Recv)  │                                            │
+│  └─────────────────┘                                            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Container Details:
+| Container | Image | Port | Purpose |
+|-----------|-------|------|---------|
+| `feedprism-qdrant` | `qdrant/qdrant:latest` | 6333, 6334 | Vector database with persistent storage |
+| `feedprism-backend` | Custom (Python 3.11) | 8000 | FastAPI extraction & search API |
+| `feedprism-frontend` | Custom (Node + Nginx) | 80 | React app served via Nginx |
+| `feedprism-lamatic-bridge` | Custom (Python 3.11) | 8001 | Lamatic webhook receiver |
+
+### Environment Variables:
+```bash
+QDRANT_API_KEY=...        # Shared secret for Qdrant auth
+OPENAI_API_KEY=...        # For LLM extraction
+DEMO_MODE=true            # Enable demo data
+```
+
+---
+
+*You've got this. The technical depth is there. The product is solid. The architecture is production-ready. Now show the judges exactly what you built.* 🚀
