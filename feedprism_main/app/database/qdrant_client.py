@@ -68,7 +68,8 @@ class QdrantService:
         self.client = QdrantClientSDK(
             host=self.host,
             port=self.port,
-            api_key=self.api_key
+            api_key=self.api_key,
+            https=False
         )
         logger.success("Qdrant client initialized" + (" with API key" if self.api_key else ""))
     
@@ -540,3 +541,46 @@ class QdrantService:
                 deleted_counts[content_type] = 0
         
         return deleted_counts
+    def is_email_processed(self, email_id: str) -> bool:
+        """
+        Check if an email has already been processed by querying all collections.
+        
+        Args:
+            email_id: Gmail message ID to check
+            
+        Returns:
+            True if email ID exists in any collection, False otherwise
+        """
+        from qdrant_client.models import Filter, FieldCondition, MatchValue
+        
+        for content_type in ["events", "courses", "blogs"]:
+            try:
+                collection = self.get_collection_name(content_type)
+                if not collection or not self.client.collection_exists(collection):
+                    continue
+                
+                # Fast check: scroll for just 1 item with this source_email_id
+                batch, _ = self.client.scroll(
+                    collection_name=collection,
+                    scroll_filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="source_email_id",
+                                match=MatchValue(value=email_id)
+                            )
+                        ]
+                    ),
+                    limit=1,
+                    with_payload=False,
+                    with_vectors=False
+                )
+                
+                if batch:
+                    logger.info(f"Email {email_id} found in {collection}")
+                    return True
+                    
+            except Exception as e:
+                logger.warning(f"Error checking status in {content_type}: {e}")
+                continue
+        
+        return False

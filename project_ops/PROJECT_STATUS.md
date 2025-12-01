@@ -47,6 +47,12 @@
 | Hackathon Submission | 🔄 In Progress | Deployment in progress |
 | Spayce Integration | 🔲 Not Started | Flutter integration (post-hackathon) |
 
+### Tech Debt
+
+| Item | Status | Priority | Description |
+|------|--------|----------|-------------|
+| T-001: Secrets Cleanup | 🔲 Not Started | P1 | Remove .env from git history, rotate API keys |
+
 ---
 
 ## Next Priority
@@ -107,6 +113,11 @@
 ## Recent Changes
 
 ### Dec 1, 2025
+- ✅ **Qdrant Client Fixes**
+  - Added `https=False` to QdrantClient to fix SSL errors in Docker
+  - Added `is_email_processed()` method for deduplication checks
+  - Fixes "SSL record layer failure" when connecting to Qdrant with API key
+
 - ✅ **F-018: Deployment Infrastructure & Qdrant Security**
   - **Comprehensive Deployment Guide:**
     - Complete rewrite of DEPLOYMENT.md (178 → 897 lines)
