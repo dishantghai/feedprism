@@ -6,11 +6,18 @@
 [![Qdrant](https://img.shields.io/badge/Powered%20by-Qdrant-red)](https://qdrant.tech)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+Author: Dishant Ghai
+Email: dishant.ghai@gmail.com
+
 ---
 
 ## Overview
 
 FeedPrism is an intelligent email intelligence system that automatically extracts structured content from newsletters, event invites, and course announcements. It transforms messy HTML emails into organized, searchable knowledge using **Qdrant vector database** as its memory backbone.
+
+<p align="center">
+  <img src="screenshots/prism-complete.png" alt="FeedPrism Main Feed" width="700"/>
+</p>
 
 **The Name:** Just like a prism refracts white light into a spectrum of colors, FeedPrism takes a messy **feed** of raw emails and refracts them into organized categories: **Events**, **Courses**, and **Blogs**.
 
@@ -263,30 +270,44 @@ feedprism/
 
 ---
 
+## Screenshots
+
+### Prism Overview — Before Extraction
+Raw emails from various sources ready for processing.
+
+<p align="center">
+  <img src="screenshots/prism-overview.png" alt="Prism Overview - Before" width="700"/>
+</p>
+
+### Prism Overview — After Extraction
+33 items extracted: 11 Events, 5 Courses, 17 Blogs.
+
+<p align="center">
+  <img src="screenshots/prism-complete.png" alt="Prism Overview - Complete" width="700"/>
+</p>
+
+### Intelligent Feed with Filters
+Mixed content feed with type filters, tag chips, sender filtering, and rich content cards.
+
+<p align="center">
+  <img src="screenshots/main-feed.png" alt="Main Feed" width="700"/>
+</p>
+
+---
+
 ## Features
 
-### Prism Overview
-Real-time extraction with SSE streaming progress.
-
-### Intelligent Feed
-Mixed content feed with type badges, tags, and source attribution.
-
-### Hybrid Search
-Semantic + keyword search with instant results.
-
-### Payload Filtering
-Filter by type, sender, tags — all powered by Qdrant payloads.
-
-### Source Traceability
-Every item links back to its original email. Zero hallucination.
-
-### Specialized Views
-- **Events Calendar** — Events on a calendar grid
-- **Blogs Gallery** — Article cards with previews
-- **Courses Catalog** — Provider badges, levels, pricing
-
-### Metrics Dashboard
-Extraction stats, category counts, quality metrics.
+| Feature | Description |
+|---------|-------------|
+| **Prism Overview** | Real-time extraction with SSE streaming progress |
+| **Intelligent Feed** | Mixed content feed with type badges, tags, and source attribution |
+| **Hybrid Search** | Semantic + keyword search with instant results |
+| **Payload Filtering** | Filter by type, sender, tags — powered by Qdrant payloads |
+| **Source Traceability** | Every item links back to its original email. Zero hallucination |
+| **Events Calendar** | Events displayed on a calendar grid |
+| **Blogs Gallery** | Article cards with previews and reading time |
+| **Courses Catalog** | Provider badges, levels, pricing |
+| **Metrics Dashboard** | Extraction stats, category counts, quality metrics |
 
 ---
 
