@@ -180,7 +180,8 @@ class QdrantService:
             collection_name=collection,
             query_vector=(vector_name, query_vector),
             limit=limit,
-            query_filter=search_filter
+            query_filter=search_filter,
+            score_threshold=0.3  # Filter out low-relevance results
         )
         
         return [
