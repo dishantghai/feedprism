@@ -1,282 +1,103 @@
-# LAMATIC-006: End-to-End Testing & Demo Script
+# LAMATIC-006: End-to-End Testing & Demo
 
 **Story ID:** LAMATIC-006  
-**Type:** Testing/QA  
-**Priority:** P1 (Important)  
-**Estimate:** 25 minutes  
+**Type:** Testing/Verification  
+**Priority:** P1  
+**Estimate:** 30 minutes  
 **Status:** To Do  
-**Depends On:** LAMATIC-001 through LAMATIC-005
+**Depends On:** LAMATIC-005 (Lamatic Flow)
 
 ---
 
 ## Overview
 
-Comprehensive testing of the complete Lamatic + FeedPrism integration, including creating a demo script for the hackathon presentation.
+Perform end-to-end testing of the complete Lamatic integration flow:  
+Gmail → Lamatic → Bridge Service → FeedPrism → Qdrant
+
+Verify idempotency, extraction accuracy, and overall system reliability.
 
 ---
 
-## Test Plan
+## Test Scenarios
 
-### Test 1: FeedPrism API Endpoint Verification
+### Scenario 1: Happy Path (New Email)
+1. Send a newsletter email to the connected Gmail account
+2. Verify Lamatic flow triggers within 5 seconds
+3. Verify bridge service receives the webhook
+4. Verify FeedPrism processes the email
+5. Verify content is extracted and stored in Qdrant
+6. Verify Slack notification is sent (if configured)
 
-**Purpose:** Verify the FeedPrism API is accessible and returns expected format
+**Expected Result:** Email is processed successfully, content appears in Qdrant.
 
-**Steps:**
-1. Ensure FeedPrism backend is running
-2. Note the public URL (deployment or ngrok)
-3. Test health endpoint:
-   ```bash
-   curl https://YOUR_FEEDPRISM_URL/api/lamatic/health
-   ```
-4. Expected response:
-   ```json
-   {"status": "healthy", "service": "feedprism-lamatic-integration", "timestamp": "..."}
-   ```
+### Scenario 2: Idempotency Check (Duplicate Email)
+1. Resend the same email from Scenario 1
+2. Verify Lamatic flow triggers again
+3. Verify bridge service **skips** the email (already processed)
+4. Verify no duplicate vectors in Qdrant
 
-**Pass Criteria:** 200 OK response with healthy status
+**Expected Result:** Bridge returns `{"status": "skipped", "reason": "already_processed"}`.
 
-### Test 2: FeedPrism Ingest Endpoint
+### Scenario 3: Error Handling
+1. Stop the FeedPrism backend
+2. Send a new email
+3. Verify bridge service returns an error
+4. Restart FeedPrism
+5. Retry the same email (manual trigger or resend)
+6. Verify it processes successfully
 
-**Purpose:** Verify the ingest endpoint processes email data correctly
+**Expected Result:** Graceful error handling, retry works.
 
-**Steps:**
-1. Send test request:
-   ```bash
-   curl -X POST https://YOUR_FEEDPRISM_URL/api/lamatic/ingest \
-     -H "Content-Type: application/json" \
-     -d '{
-       "emailId": "test_001",
-       "from": "newsletter@aiweekly.com",
-       "to": "user@example.com",
-       "subject": "AI Weekly: Test Newsletter",
-       "body": "<html><body><h1>Upcoming Event: AI Summit 2024</h1><p>Join us on Dec 15 in San Francisco</p></body></html>",
-       "timestamp": "2025-12-01T10:30:00Z",
-       "labels": ["INBOX"],
-       "attachments": []
-     }'
-   ```
-2. Verify response contains:
-   - `status: "success"`
-   - `data.items_extracted` > 0
-   - `data.has_events` or `data.has_actions`
+---
 
-**Pass Criteria:** 200 OK with extracted content
+## Testing Checklist
 
-### Test 3: Gmail Trigger in Lamatic
+- [ ] Gmail trigger detects emails within 5 seconds
+- [ ] Bridge service receives correct payload format
+- [ ] Idempotency check works (duplicates are skipped)
+- [ ] New emails are processed and stored in Qdrant
+- [ ] Extraction quality is acceptable (spot-check a few emails)
+- [ ] End-to-end latency < 15 seconds
+- [ ] Error handling works (service unavailable, retries, etc.)
 
-**Purpose:** Verify Gmail Node triggers on new emails
+---
 
-**Steps:**
-1. Open Lamatic Studio
-2. Go to the FeedPrism Email Intelligence flow
-3. Open the Gmail Trigger node debug panel
-4. Send a test email to the connected Gmail account
-5. Watch for trigger event in Lamatic logs
+## Demo Script
 
-**Pass Criteria:** Trigger fires within 10 seconds of email arrival
+For hackathon presentation:
 
-### Test 4: Full Flow Execution
+1. **Show the Flow:** Open Lamatic Studio, display the flow diagram
+2. **Show Monitoring:** Open:
+   - Lamatic logs
+   - Bridge service terminal
+   - FeedPrism backend logs
+   - Slack channel (optional)
+3. **Trigger the Flow:** Send a test email or forward a newsletter
+4. **Watch Real-Time:**
+   - Lamatic flow executes
+   - Bridge receives webhook
+   - FeedPrism extracts content
+   - Slack notification arrives
+5. **Verify Results:** Open FeedPrism UI, search for the extracted content
+6. **Demonstrate Idempotency:** Resend the same email, show "skipped" log
 
-**Purpose:** Verify entire flow executes correctly
-
-**Steps:**
-1. Send a test email with known content:
-   ```
-   Subject: Test Newsletter - AI Summit Event
-   Body: Join us for AI Summit 2024 on December 15th in San Francisco!
-         Register at: https://aisummit.example.com
-         Registration deadline: December 10th
-   ```
-2. Watch Lamatic logs for each node execution
-3. Verify:
-   - Gmail Trigger → fires
-   - API Node → calls FeedPrism successfully
-   - Code Node → parses without error
-   - Branch Node → routes correctly
-   - Gmail/Slack Node → executes
-
-**Pass Criteria:** All nodes execute with green status
-
-### Test 5: Slack Notification
-
-**Purpose:** Verify Slack receives formatted notification
-
-**Steps:**
-1. Complete Test 4
-2. Check `#feedprism-alerts` channel
-3. Verify message contains:
-   - Email sender
-   - Subject line
-   - Extraction summary
-   - Event details (if extracted)
-
-**Pass Criteria:** Message appears in Slack within 15 seconds
-
-### Test 6: Calendar Draft Creation
-
-**Purpose:** Verify calendar event draft is created
-
-**Steps:**
-1. Send email with clear event data
-2. Check Gmail Drafts folder
-3. Look for calendar event draft or email draft with event details
-
-**Pass Criteria:** Draft created with correct event details
-
-### Test 7: Error Handling
-
-**Purpose:** Verify graceful handling of errors
-
-**Steps:**
-1. Test with invalid FeedPrism URL
-2. Test with malformed email body
-3. Test with missing required fields
-
-**Expected Behavior:**
-- Flow should not crash
-- Error should be logged
-- Notification should indicate failure (or skip gracefully)
-
-**Pass Criteria:** Flow handles errors without crashing
+**Total Demo Time:** 60-90 seconds
 
 ---
 
 ## Performance Benchmarks
 
-| Metric | Target | Acceptable |
-|--------|--------|------------|
-| Gmail trigger latency | < 5s | < 10s |
-| FeedPrism API response | < 2s | < 5s |
-| Total end-to-end time | < 10s | < 20s |
-| Slack notification delay | < 3s | < 5s |
-
----
-
-## Test Checklist
-
-### Pre-Demo Verification
-
-- [ ] FeedPrism backend running and accessible
-- [ ] ngrok tunnel active (if using local)
-- [ ] Lamatic flow deployed
-- [ ] Gmail credentials valid
-- [ ] Slack channel ready and visible
-- [ ] Test email account accessible
-
-### Flow Execution Tests
-
-- [ ] Gmail trigger fires on new email
-- [ ] API Node successfully calls FeedPrism
-- [ ] Code Node parses response correctly
-- [ ] Branch Node routes based on content
-- [ ] Calendar draft created (if events found)
-- [ ] Slack notification received
-
-### Demo Preparation
-
-- [ ] Have test email ready to send
-- [ ] Browser tabs open:
-  - Lamatic Studio (flow view)
-  - Lamatic Logs
-  - FeedPrism UI
-  - Slack channel
-  - Gmail (to see draft)
-- [ ] Screen recording ready (optional backup)
-
----
-
-## Demo Script (90 Seconds)
-
-### Setup (Before Demo)
-1. Open browser with tabs:
-   - Tab 1: Lamatic Studio - Flow diagram visible
-   - Tab 2: Slack `#feedprism-alerts`
-   - Tab 3: FeedPrism UI - Content view
-   - Tab 4: Gmail - Ready to send email
-2. Prepare test email in drafts
-
-### Demo Flow
-
-**[0:00 - 0:15] Introduction**
-> "Let me show you FeedPrism with real-time Lamatic automation."
-> 
-> "This flow monitors Gmail, extracts content using FeedPrism's AI pipeline, stores in Qdrant, and notifies via Slack - all automatically."
-
-**[0:15 - 0:25] Show Architecture**
-> "Here's the Lamatic flow..."
-> 
-> [Show Lamatic Studio tab with flow diagram]
-> 
-> "Gmail trigger, FeedPrism API call, branching logic, calendar draft, and Slack notification."
-
-**[0:25 - 0:35] Send Test Email**
-> "Watch what happens when a newsletter arrives..."
-> 
-> [Switch to Gmail tab, send the prepared test email]
-> 
-> "Email sent."
-
-**[0:35 - 0:50] Show Real-Time Processing**
-> [Switch to Lamatic Logs tab]
-> 
-> "The flow is triggering now..."
-> 
-> [Wait for nodes to show execution]
-> 
-> "Gmail detected, calling FeedPrism, extracting content..."
-
-**[0:50 - 1:05] Show Results**
-> [Switch to Slack tab]
-> 
-> "And here's the Slack notification - arrived in under 10 seconds."
-> 
-> [Show the notification with extracted content]
-> 
-> [Switch to FeedPrism UI]
-> 
-> "Content is now searchable in FeedPrism with full Qdrant hybrid search."
-
-**[1:05 - 1:30] Wrap Up**
-> "This demonstrates memory-over-models in action:"
-> - "Real-time ingestion, not batch"
-> - "Qdrant stores the memory, Lamatic orchestrates the actions"
-> - "Never miss an important event or deadline"
-
----
-
-## Fallback Plans
-
-### If Gmail Trigger Fails
-1. Use webhook trigger instead
-2. Manually call the webhook with test data
-3. Show flow execution from API Node onwards
-
-### If FeedPrism API Unreachable
-1. Use pre-recorded demo video
-2. Show API response from earlier test (in Lamatic logs)
-3. Explain the expected behavior
-
-### If Slack Fails
-1. Show logs where Slack call was made
-2. Explain Slack would receive the message
-3. Continue with other results
-
----
-
-## Recorded Backup
-
-Create a backup screen recording:
-
-1. Start screen recording
-2. Run through demo script
-3. Capture successful end-to-end execution
-4. Save video as backup for presentation
+| Metric | Target | Actual |
+|--------|--------|--------|
+| Gmail → Lamatic trigger | < 5s | ___ |
+| Lamatic → Bridge call | < 1s | ___ |
+| Bridge → FeedPrism → Qdrant | < 10s | ___ |
+| End-to-End | < 15s | ___ |
 
 ---
 
 ## Next Steps
 
-After completing testing:
-1. Fix any issues found
+After testing:
+1. Fix any bugs or performance issues
 2. Proceed to **LAMATIC-007** for documentation
-3. Practice demo 2-3 times before presentation

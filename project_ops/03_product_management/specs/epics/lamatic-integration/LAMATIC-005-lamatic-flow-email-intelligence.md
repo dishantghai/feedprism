@@ -5,20 +5,20 @@
 **Priority:** P0 (Critical)  
 **Estimate:** 45 minutes  
 **Status:** To Do  
-**Depends On:** LAMATIC-001, LAMATIC-002, LAMATIC-003
+**Depends On:** LAMATIC-001, LAMATIC-002, LAMATIC-003, LAMATIC-004
+
 
 ---
 
 ## Overview
 
-Build the complete Lamatic flow that:
+Build the Lamatic flow that:
 1. Triggers on new Gmail messages (real-time)
-2. Calls FeedPrism API to extract content
-3. Branches based on extracted content type
-4. Creates calendar event draft if events found
-5. Sends Slack notification with summary
+2. Calls **Lamatic Bridge Service** (`http://bridge:8001/receive`) to process the email
+3. Bridge service handles idempotency and forwards to FeedPrism
+4. (Optional) Sends Slack notification with summary
 
-This is the core integration that demonstrates Lamatic + FeedPrism + Qdrant working together.
+This demonstrates Lamatic + Bridge + FeedPrism + Qdrant working together with **minimal impact** on the FeedPrism backend.
 
 ---
 
@@ -27,8 +27,9 @@ This is the core integration that demonstrates Lamatic + FeedPrism + Qdrant work
 Before starting, ensure you have:
 - [ ] Google OAuth credentials (from LAMATIC-001)
 - [ ] Lamatic project created (from LAMATIC-002)
-- [ ] FeedPrism API endpoint accessible (from LAMATIC-003)
-- [ ] Slack channel ready (from LAMATIC-004) - optional but recommended
+- [ ] **Bridge service running** on port 8001 (from LAMATIC-003)
+- [ ] FeedPrism minimal router added (from LAMATIC-004)
+- [ ] Bridge service accessible to Lamatic (use ngrok for local dev)
 
 ---
 
@@ -149,9 +150,9 @@ labels: ["INBOX", "UNREAD"]
 attachments: []
 ```
 
-### Step 3: Add API Node (Call FeedPrism)
+### Step 3: Add API Node (Call Bridge Service)
 
-This node calls the FeedPrism backend to process the email.
+This node calls the **Lamatic Bridge Service** to process the email.
 
 1. Click **"+"** after the Gmail Trigger node
 2. Search for **"API"** in the nodes panel
@@ -162,8 +163,8 @@ This node calls the FeedPrism backend to process the email.
 
 | Field | Value |
 |-------|-------|
-| **Node Name** | `FeedPrism Ingest` |
-| **URL** | `https://YOUR_FEEDPRISM_URL/api/lamatic/ingest` |
+| **Node Name** | `Bridge Service Call` |
+| **URL** | `https://YOUR_BRIDGE_URL/receive` (see below) |
 | **Method** | `POST` |
 | **Headers** | `{"Content-Type": "application/json"}` |
 | **Body** | See below |
@@ -172,27 +173,27 @@ This node calls the FeedPrism backend to process the email.
 
 **Body Configuration:**
 
-Use the variables from the Gmail node. The exact syntax depends on Lamatic's templating:
+Use the variables from the Gmail node:
 
 ```json
 {
-  "emailId": "{{gmailTrigger.emailId}}",
-  "from": "{{gmailTrigger.from}}",
-  "to": "{{gmailTrigger.to}}",
+  "email_id": "{{gmailTrigger.emailId}}",
   "subject": "{{gmailTrigger.subject}}",
-  "body": "{{gmailTrigger.body}}",
-  "timestamp": "{{gmailTrigger.timestamp}}",
-  "labels": {{gmailTrigger.labels}},
-  "attachments": {{gmailTrigger.attachments}}
+  "from": "{{gmailTrigger.from}}",
+  "body_html": "{{gmailTrigger.body}}",
+  "body_text": "{{gmailTrigger.body}}"
 }
 ```
 
 > **Note:** Variable syntax may be `{{nodeId.field}}` or `${nodeId.field}` depending on Lamatic version. Check the node output panel for exact variable names.
 
-**Finding Your FeedPrism URL:**
-- If deployed: Use your deployment URL (e.g., `https://feedprism.railway.app`)
-- If local with ngrok: Use ngrok URL (e.g., `https://abc123.ngrok.io`)
-- For testing: You can use the health endpoint first to verify
+**Finding Your Bridge URL:**
+- **Local with ngrok:** 
+  1. Run bridge service: `cd lamatic_bridge && python main.py`
+  2. In another terminal: `ngrok http 8001`
+  3. Use the ngrok HTTPS URL (e.g., `https://abc123.ngrok.io`)
+- **Deployed:** Use your deployment URL (e.g., `https://bridge.yourapp.com`)
+- **Test first:** Visit `https://your-bridge-url/health` to verify
 
 ### Step 4: Add Code Node (Parse Response)
 

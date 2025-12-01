@@ -1,462 +1,331 @@
-# LAMATIC-003: FeedPrism Lamatic API Router
+# LAMATIC-003: Create Lamatic Bridge Service
 
 **Story ID:** LAMATIC-003  
-**Type:** Backend Development  
-**Priority:** P0 (Blocker)  
+**Type:** Backend/Service  
+**Priority:** P0 (Critical)  
 **Estimate:** 45 minutes  
 **Status:** To Do  
-**Depends On:** None (can be done in parallel with LAMATIC-001, LAMATIC-002)
+**Depends On:** LAMATIC-000 (Idempotency Check)
 
 ---
 
 ## Overview
 
-Create a dedicated API router in FeedPrism backend to handle requests from Lamatic flows. This includes:
-1. Single email ingestion endpoint (for real-time processing)
-2. Actions query endpoint (for reminder flows)
-3. Webhook endpoint for event notifications (for calendar creation)
+Create a standalone FastAPI service (`lamatic_bridge/`) that acts as the intermediary between Lamatic's webhook and the FeedPrism backend. This service receives email payloads from Lamatic, optionally checks for duplicates, and forwards them to FeedPrism for processing.
+
+**Why a Bridge Service?**
+- **Zero Impact:** FeedPrism backend remains untouched
+- **Isolation:** Can be developed, tested, and deployed independently
+- **Flexibility:** Easy to add Lamatic-specific logic without polluting FeedPrism
+- **Rollback:** Simply remove the service if needed
 
 ---
 
-## Technical Requirements
+## Implementation Steps
 
-### Endpoint 1: Ingest Single Email
+### Step 1: Create Project Structure
 
-**Purpose:** Called by Lamatic when Gmail trigger detects new email
+Create a new folder `lamatic_bridge/` at the repository root:
 
-```
-POST /api/lamatic/ingest
-Content-Type: application/json
-```
-
-**Request Body (from Lamatic Gmail Node output):**
-```json
-{
-  "emailId": "msg_abc123def456",
-  "from": "newsletter@aiweekly.com",
-  "to": "user@example.com",
-  "subject": "AI Weekly: Top Stories This Week",
-  "body": "<html>...email HTML content...</html>",
-  "timestamp": "2025-12-01T10:30:00Z",
-  "labels": ["INBOX", "UNREAD"],
-  "attachments": []
-}
+```bash
+cd /Users/Shared/ALL\ WORKSPACE/Hackathons/mom_hack
+mkdir -p lamatic_bridge
+cd lamatic_bridge
 ```
 
-**Response:**
-```json
-{
-  "status": "success",
-  "message": "Email processed successfully",
-  "data": {
-    "email_id": "msg_abc123def456",
-    "items_extracted": 5,
-    "content_summary": {
-      "events": 2,
-      "courses": 1,
-      "blogs": 2,
-      "actions": 1
-    },
-    "events": [
-      {
-        "id": "evt_uuid_123",
-        "title": "AI Summit 2024",
-        "start_time": "2025-12-15T09:00:00Z",
-        "end_time": "2025-12-15T17:00:00Z",
-        "location": "San Francisco, CA",
-        "description": "Annual AI conference...",
-        "registration_url": "https://aisummit.com/register"
-      }
-    ],
-    "actions": [
-      {
-        "id": "act_uuid_456",
-        "type": "register",
-        "title": "Register for AI Summit",
-        "deadline": "2025-12-10T23:59:59Z",
-        "url": "https://aisummit.com/register"
-      }
-    ],
-    "has_events": true,
-    "has_actions": true
-  }
-}
+### Step 2: Create `requirements.txt`
+
+Create `lamatic_bridge/requirements.txt`:
+
+```txt
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+httpx==0.25.1
+python-dotenv==1.0.0
+loguru==0.7.2
+qdrant-client==1.7.0
 ```
 
-### Endpoint 2: Get Pending Actions
+### Step 3: Create `.env` Template
 
-**Purpose:** Called by scheduled Lamatic job to get upcoming action reminders
+Create `lamatic_bridge/.env.example`:
 
-```
-GET /api/lamatic/actions?due_within_hours=48&status=pending
-```
+```bash
+# FeedPrism Backend URL (adjust for your deployment)
+FEEDPRISM_URL=http://localhost:8000
 
-**Response:**
-```json
-{
-  "status": "success",
-  "data": {
-    "actions": [
-      {
-        "id": "act_uuid_456",
-        "type": "register",
-        "title": "Register for AI Summit",
-        "deadline": "2025-12-10T23:59:59Z",
-        "url": "https://aisummit.com/register",
-        "source_email_subject": "AI Weekly: Top Stories",
-        "source_sender": "newsletter@aiweekly.com",
-        "hours_until_deadline": 24
-      }
-    ],
-    "count": 1
-  }
-}
+# Qdrant Connection (for idempotency check)
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+QDRANT_API_KEY=
+
+# Bridge Service Port
+BRIDGE_PORT=8001
 ```
 
-### Endpoint 3: Webhook for External Notifications (Optional)
-
-**Purpose:** Receive webhook calls from Lamatic for bidirectional communication
-
-```
-POST /api/lamatic/webhook
-Content-Type: application/json
+Copy to `.env`:
+```bash
+cp .env.example .env
 ```
 
----
+### Step 4: Create Main Service File
 
-## Implementation
-
-### File: `feedprism_main/app/routers/lamatic.py`
+Create `lamatic_bridge/main.py`:
 
 ```python
 """
-Lamatic Integration Router
+Lamatic Bridge Service
 
-Provides API endpoints for Lamatic flow integration:
-- Real-time email ingestion from Gmail triggers
-- Pending actions for reminder flows
-- Webhook handling for bidirectional communication
+Receives webhooks from Lamatic and forwards to FeedPrism with idempotency check.
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel, Field
-from typing import List, Optional
-from datetime import datetime, timedelta
-import logging
+import os
+import sys
+from pathlib import Path
+from typing import Dict, Any
 
-# Import existing extraction and storage modules
-# from app.services.extraction import extract_content_from_email
-# from app.services.qdrant import store_extracted_content
-# from app.services.actions import get_pending_actions
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+import httpx
+from loguru import logger
+from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
+# Load environment variables
+load_dotenv()
 
-router = APIRouter(prefix="/api/lamatic", tags=["lamatic"])
+# Add FeedPrism to path for QdrantService import
+feedprism_path = Path(__file__).parent.parent / "feedprism_main"
+sys.path.append(str(feedprism_path))
 
+from app.database.qdrant_client import QdrantService
 
-# ============== Pydantic Models ==============
+# Initialize FastAPI
+app = FastAPI(
+    title="Lamatic Bridge Service",
+    description="Receives Lamatic webhooks and forwards to FeedPrism",
+    version="1.0.0"
+)
 
-class LamaticEmailInput(BaseModel):
-    """
-    Input model matching Lamatic Gmail Node output schema.
-    See: https://lamatic.ai/docs/nodes/apps/gmail-node#output
-    """
-    emailId: str = Field(..., description="Gmail message ID")
-    from_address: str = Field(..., alias="from", description="Sender email")
-    to: str = Field(..., description="Recipient email")
-    subject: str = Field(..., description="Email subject line")
-    body: str = Field(..., description="Email body content (HTML)")
-    timestamp: str = Field(..., description="Email timestamp ISO format")
-    labels: List[str] = Field(default_factory=list, description="Gmail labels")
-    attachments: List[dict] = Field(default_factory=list, description="Attachments")
-    
-    class Config:
-        populate_by_name = True
+# Configuration
+FEEDPRISM_URL = os.getenv("FEEDPRISM_URL", "http://localhost:8000")
+BRIDGE_PORT = int(os.getenv("BRIDGE_PORT", "8001"))
 
-
-class ExtractedEvent(BaseModel):
-    """Event extracted from email"""
-    id: str
-    title: str
-    start_time: Optional[str] = None
-    end_time: Optional[str] = None
-    location: Optional[str] = None
-    description: Optional[str] = None
-    registration_url: Optional[str] = None
+# Initialize Qdrant (for idempotency check)
+try:
+    qdrant = QdrantService()
+    logger.success("Qdrant client initialized")
+except Exception as e:
+    logger.warning(f"Qdrant initialization failed: {e}")
+    qdrant = None
 
 
-class ExtractedAction(BaseModel):
-    """Action item extracted from email"""
-    id: str
-    type: str  # register, rsvp, submit, deadline
-    title: str
-    deadline: Optional[str] = None
-    url: Optional[str] = None
-
-
-class IngestResponse(BaseModel):
-    """Response for email ingestion"""
-    status: str
-    message: str
-    data: dict
-
-
-class ActionsResponse(BaseModel):
-    """Response for actions query"""
-    status: str
-    data: dict
-
-
-# ============== Endpoints ==============
-
-@router.post("/ingest", response_model=IngestResponse)
-async def ingest_email_from_lamatic(
-    email: LamaticEmailInput,
-    background_tasks: BackgroundTasks
-):
-    """
-    Process a single email from Lamatic Gmail trigger.
-    
-    This endpoint is called by Lamatic's API Node when the Gmail 
-    trigger detects a new email. It:
-    1. Parses the email content
-    2. Extracts events, courses, blogs, and actions
-    3. Stores in Qdrant
-    4. Returns structured data for Lamatic branching logic
-    """
-    logger.info(f"Received email from Lamatic: {email.subject} from {email.from_address}")
-    
-    try:
-        # TODO: Integrate with existing extraction pipeline
-        # result = await extract_content_from_email(
-        #     email_id=email.emailId,
-        #     from_email=email.from_address,
-        #     subject=email.subject,
-        #     body_html=email.body,
-        #     received_at=email.timestamp
-        # )
-        
-        # For now, return mock response structure
-        # Replace with actual extraction logic
-        
-        mock_events = [
-            ExtractedEvent(
-                id=f"evt_{email.emailId[:8]}",
-                title="Extracted Event Title",
-                start_time="2025-12-15T09:00:00Z",
-                end_time="2025-12-15T17:00:00Z",
-                location="San Francisco, CA",
-                description="Event description extracted from email",
-                registration_url="https://example.com/register"
-            )
-        ]
-        
-        mock_actions = [
-            ExtractedAction(
-                id=f"act_{email.emailId[:8]}",
-                type="register",
-                title="Register for event",
-                deadline="2025-12-10T23:59:59Z",
-                url="https://example.com/register"
-            )
-        ]
-        
-        response_data = {
-            "email_id": email.emailId,
-            "items_extracted": len(mock_events) + len(mock_actions),
-            "content_summary": {
-                "events": len(mock_events),
-                "courses": 0,
-                "blogs": 0,
-                "actions": len(mock_actions)
-            },
-            "events": [e.dict() for e in mock_events],
-            "actions": [a.dict() for a in mock_actions],
-            "has_events": len(mock_events) > 0,
-            "has_actions": len(mock_actions) > 0
-        }
-        
-        logger.info(f"Extracted {response_data['items_extracted']} items from email")
-        
-        return IngestResponse(
-            status="success",
-            message="Email processed successfully",
-            data=response_data
-        )
-        
-    except Exception as e:
-        logger.error(f"Error processing email: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process email: {str(e)}"
-        )
-
-
-@router.get("/actions", response_model=ActionsResponse)
-async def get_pending_actions_for_lamatic(
-    due_within_hours: int = 48,
-    status: str = "pending"
-):
-    """
-    Get pending action items with upcoming deadlines.
-    
-    Called by Lamatic scheduled job for reminder flows.
-    Returns actions that are due within the specified hours.
-    """
-    logger.info(f"Fetching actions due within {due_within_hours} hours")
-    
-    try:
-        # TODO: Integrate with actual Qdrant query
-        # actions = await get_actions_from_qdrant(
-        #     due_within_hours=due_within_hours,
-        #     status=status
-        # )
-        
-        # Mock response
-        now = datetime.utcnow()
-        deadline = now + timedelta(hours=24)
-        
-        mock_actions = [
-            {
-                "id": "act_mock_001",
-                "type": "register",
-                "title": "Register for AI Summit",
-                "deadline": deadline.isoformat() + "Z",
-                "url": "https://aisummit.com/register",
-                "source_email_subject": "AI Weekly Newsletter",
-                "source_sender": "newsletter@aiweekly.com",
-                "hours_until_deadline": 24
-            }
-        ]
-        
-        return ActionsResponse(
-            status="success",
-            data={
-                "actions": mock_actions,
-                "count": len(mock_actions)
-            }
-        )
-        
-    except Exception as e:
-        logger.error(f"Error fetching actions: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch actions: {str(e)}"
-        )
-
-
-@router.post("/webhook")
-async def handle_lamatic_webhook(payload: dict):
-    """
-    Handle incoming webhooks from Lamatic flows.
-    
-    This can be used for bidirectional communication,
-    such as receiving confirmations or triggering actions.
-    """
-    logger.info(f"Received webhook from Lamatic: {payload}")
-    
-    # Process webhook based on event type
-    event_type = payload.get("event_type", "unknown")
-    
+@app.get("/")
+async def root():
+    """Health check endpoint"""
     return {
-        "status": "received",
-        "event_type": event_type,
-        "message": "Webhook processed"
+        "service": "Lamatic Bridge",
+        "status": "running",
+        "feedprism_url": FEEDPRISM_URL,
+        "qdrant_connected": qdrant is not None
     }
 
 
-@router.get("/health")
-async def lamatic_health_check():
-    """
-    Health check endpoint for Lamatic to verify connectivity.
-    """
+@app.get("/health")
+async def health():
+    """Detailed health check"""
     return {
-        "status": "healthy",
-        "service": "feedprism-lamatic-integration",
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "bridge": "healthy",
+        "feedprism": await check_feedprism_health(),
+        "qdrant": qdrant is not None
     }
+
+
+async def check_feedprism_health() -> bool:
+    """Check if FeedPrism backend is reachable"""
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"{FEEDPRISM_URL}/", timeout=5.0)
+            return resp.status_code == 200
+    except Exception:
+        return False
+
+
+@app.post("/receive")
+async def receive_webhook(request: Request):
+    """
+    Receive email webhook from Lamatic.
+    
+    Expected payload:
+    {
+        "email_id": "gmail_message_id",
+        "subject": "Email subject",
+        "from": "sender@example.com",
+        "body_html": "<html>...",
+        "body_text": "..."
+    }
+    """
+    try:
+        payload = await request.json()
+        email_id = payload.get("email_id")
+        
+        if not email_id:
+            raise HTTPException(status_code=400, detail="email_id is required")
+        
+        logger.info(f"Received webhook for email: {email_id}")
+        
+        # Check idempotency (skip if already processed)
+        if qdrant and qdrant.is_email_processed(email_id):
+            logger.info(f"Email {email_id} already processed, skipping")
+            return JSONResponse({
+                "status": "skipped",
+                "reason": "already_processed",
+                "email_id": email_id
+            })
+        
+        # Forward to FeedPrism
+        logger.info(f"Forwarding email {email_id} to FeedPrism")
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{FEEDPRISM_URL}/api/lamatic/bridge",
+                json=payload,
+                timeout=30.0  # Allow time for extraction
+            )
+            resp.raise_for_status()
+            result = resp.json()
+        
+        logger.success(f"Successfully processed email {email_id}")
+        return JSONResponse(result)
+        
+    except httpx.HTTPStatusError as e:
+        logger.error(f"FeedPrism returned error: {e.response.status_code}")
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=f"FeedPrism error: {e.response.text}"
+        )
+    except Exception as e:
+        logger.exception(f"Error processing webhook: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=BRIDGE_PORT)
 ```
 
----
+### Step 5: Create Dockerfile
 
-## Integration with Main App
+Create `lamatic_bridge/Dockerfile`:
 
-### Update `feedprism_main/app/main.py`:
+```dockerfile
+FROM python:3.11-slim
 
-```python
-# Add import
-from app.routers import lamatic
+WORKDIR /app
 
-# Add router
-app.include_router(lamatic.router)
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy service code
+COPY main.py .
+COPY .env .
+
+# Expose port
+EXPOSE 8001
+
+# Run service
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
 ```
 
----
+### Step 6: Create Docker Compose Entry
 
-## Testing
+Add to project root `docker-compose.yml` (or create if it doesn't exist):
 
-### Test with curl:
+```yaml
+services:
+  lamatic-bridge:
+    build:
+      context: ./lamatic_bridge
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - FEEDPRISM_URL=http://feedprism-backend:8000
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+    depends_on:
+      - feedprism-backend
+      - qdrant
+```
+
+### Step 7: Test Locally
 
 ```bash
-# Health check
-curl http://localhost:8000/api/lamatic/health
+# Navigate to bridge folder
+cd lamatic_bridge
 
-# Test ingest endpoint
-curl -X POST http://localhost:8000/api/lamatic/ingest \
-  -H "Content-Type: application/json" \
-  -d '{
-    "emailId": "test_email_123",
-    "from": "newsletter@test.com",
-    "to": "user@example.com",
-    "subject": "Test Newsletter",
-    "body": "<html><body>Test content</body></html>",
-    "timestamp": "2025-12-01T10:30:00Z",
-    "labels": ["INBOX"],
-    "attachments": []
-  }'
+# Install dependencies
+pip install -r requirements.txt
 
-# Test actions endpoint
-curl "http://localhost:8000/api/lamatic/actions?due_within_hours=48"
+# Run the service
+python main.py
 ```
 
----
-
-## Public Accessibility for Lamatic
-
-Lamatic needs to reach your FeedPrism API. Options:
-
-### Option 1: Deploy to Cloud (Recommended for Demo)
-If FeedPrism is deployed (Railway, Render, etc.), use the public URL.
-
-### Option 2: Use ngrok for Local Development
-```bash
-# Install ngrok
-brew install ngrok
-
-# Start tunnel
-ngrok http 8000
-
-# Use the https URL provided (e.g., https://abc123.ngrok.io)
-```
-
-Save the ngrok URL - you'll use it in the Lamatic API Node configuration.
+Visit `http://localhost:8001` to see the health check.
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] `/api/lamatic/ingest` endpoint accepts Lamatic Gmail Node output format
-- [ ] `/api/lamatic/actions` endpoint returns pending actions
-- [ ] `/api/lamatic/health` endpoint returns healthy status
-- [ ] Endpoints are publicly accessible (via deployment or ngrok)
-- [ ] Error handling returns proper HTTP status codes
-- [ ] Logging captures incoming requests
+### Functional
+- [x] Bridge service runs on port 8001
+- [ ] `/receive` endpoint accepts JSON payloads
+- [ ] Idempotency check works (calls `qdrant.is_email_processed()`)
+- [ ] Forwards new emails to FeedPrism `/api/lamatic/bridge`
+- [ ] Returns appropriate responses (200 for success, 400 for bad requests)
+
+### Technical
+- [ ] Service starts without errors
+- [ ] Health check endpoint (`/`) returns status
+- [ ] Docker image builds successfully
+- [ ] Logs show clear request/response flow
+
+---
+
+## Testing
+
+Test the bridge service with `curl`:
+
+```bash
+# Health check
+curl http://localhost:8001/health
+
+# Send test email
+curl -X POST http://localhost:8001/receive \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email_id": "test_email_123",
+    "subject": "Test Email",
+    "from": "test@example.com",
+    "body_html": "<p>Test content</p>",
+    "body_text": "Test content"
+  }'
+```
 
 ---
 
 ## Next Steps
 
-After completing this:
-1. Test endpoints locally with curl
-2. Set up public accessibility (ngrok or deploy)
-3. Proceed to **LAMATIC-004** (Slack setup) or **LAMATIC-005** (build flow)
+After completing this story:
+1. Proceed to **LAMATIC-004** to add the minimal router to FeedPrism
+2. Then **LAMATIC-005** to configure Lamatic flow to call this bridge
+
+---
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Port 8001 already in use | Change `BRIDGE_PORT` in `.env` |
+| Qdrant connection fails | Ensure Qdrant is running on port 6333 |
+| FeedPrism unreachable | Update `FEEDPRISM_URL` in `.env` |
+| ImportError for QdrantService | Ensure `feedprism_main` is in parent directory |

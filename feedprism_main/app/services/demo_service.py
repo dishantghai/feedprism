@@ -250,7 +250,8 @@ class DemoService:
         """Initialize demo service with Qdrant client."""
         self.client = QdrantClient(
             host=settings.qdrant_host,
-            port=settings.qdrant_port
+            port=settings.qdrant_port,
+            api_key=settings.qdrant_api_key if settings.qdrant_api_key else None
         )
         self.vector_size = settings.embedding_dimension
         self._extracted_ids: set = set()  # Track extracted demo items
