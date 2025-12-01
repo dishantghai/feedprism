@@ -47,11 +47,13 @@ class QdrantService:
     def __init__(
         self,
         host: str = None,
-        port: int = None
+        port: int = None,
+        api_key: str = None
     ):
         """Initialize Qdrant client."""
         self.host = host or settings.qdrant_host
         self.port = port or settings.qdrant_port
+        self.api_key = api_key or settings.qdrant_api_key
         self.vector_size = settings.embedding_dimension
         
         # Map content types to collection names
@@ -62,8 +64,13 @@ class QdrantService:
         }
         
         logger.info(f"Connecting to Qdrant: {self.host}:{self.port}")
-        self.client = QdrantClientSDK(host=self.host, port=self.port)
-        logger.success("Qdrant client initialized")
+        # Pass API key if configured (for authentication)
+        self.client = QdrantClientSDK(
+            host=self.host,
+            port=self.port,
+            api_key=self.api_key
+        )
+        logger.success("Qdrant client initialized" + (" with API key" if self.api_key else ""))
     
     def get_collection_name(self, content_type: ContentType) -> str:
         """Get collection name for content type."""

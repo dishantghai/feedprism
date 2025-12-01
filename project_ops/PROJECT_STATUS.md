@@ -1,6 +1,6 @@
 # FeedPrism Project Status
 
-**Last Updated:** Nov 30, 2025 (8:55 PM IST)
+**Last Updated:** Dec 1, 2025 (10:30 AM IST)
 
 ---
 
@@ -31,22 +31,33 @@
 | Phase 6: Metrics Panel | ✅ Complete | Dashboard view with metrics (F-001) |
 | Phase 7: Polish | ✅ Complete | Animations, loading states, demo mode, UI fixes |
 
+### Deployment & Infrastructure
+
+| Item | Status | Description |
+|------|--------|-------------|
+| F-018: Deployment Guide | ✅ Complete | Comprehensive GCP deployment with location indicators |
+| Qdrant API Security | ✅ Complete | API key authentication for external access |
+| Docker Compose | ✅ Complete | Healthchecks, env handling, data persistence |
+| Lamatic Integration | ✅ Ready | Qdrant exposed on port 6333 with API key |
+
 ### Submission & Post-Hackathon
 
 | Item | Status | Description |
 |------|--------|-------------|
-| Hackathon Submission | 🔲 Not Started | README, demo video, submission form |
+| Hackathon Submission | 🔄 In Progress | Deployment in progress |
 | Spayce Integration | 🔲 Not Started | Flutter integration (post-hackathon) |
 
 ---
 
 ## Next Priority
 
-**🎉 All frontend phases complete!** Ready for hackathon submission.
+**🎉 All phases complete!** Deploying for hackathon submission.
 
 **Current Focus:**
-- Hackathon submission (README, demo video, deployment)
-- Final testing of demo mode flow
+- Complete GCP VM deployment
+- Verify all services running
+- Test demo mode end-to-end
+- Share URL with judges
 
 **Product backlog:** See `03_product_management/BACKLOG.md`
 **Workflow:** `03_product_management/WORKFLOW.md`
@@ -94,6 +105,34 @@
 ---
 
 ## Recent Changes
+
+### Dec 1, 2025
+- ✅ **F-018: Deployment Infrastructure & Qdrant Security**
+  - **Comprehensive Deployment Guide:**
+    - Complete rewrite of DEPLOYMENT.md (178 → 897 lines)
+    - 14 sections covering end-to-end GCP deployment
+    - Location indicators (🖥️ LOCAL, 🌐 VM, 🐳 CONTAINER, 🌍 BROWSER)
+    - Step-by-step commands with exact syntax
+    - Troubleshooting section for common issues
+  - **Qdrant API Key Security:**
+    - Added `qdrant_api_key` to config.py
+    - QdrantClient initialized with API key parameter
+    - Docker Compose: `QDRANT__SERVICE__API_KEY` environment variable
+    - External clients authenticate via `api-key` header
+  - **Docker Compose Enhancements:**
+    - Qdrant healthcheck for dependency management
+    - Better environment variable handling with defaults
+    - Data volume persistence for backend
+  - **Lamatic Integration Ready:**
+    - Qdrant exposed on port 6333 with API key auth
+    - Firewall configuration documented
+    - Connection settings for external pipelines
+  - **Files Modified:**
+    - `DEPLOYMENT.md` - Complete rewrite
+    - `docker-compose.yml` - Security & healthchecks
+    - `feedprism_main/app/config.py` - qdrant_api_key setting
+    - `feedprism_main/app/database/qdrant_client.py` - API key support
+    - `.env.example` - All configuration options
 
 ### Nov 30, 2025
 - ✅ **F-017: Demo Mode for Hackathon (Enhanced)**

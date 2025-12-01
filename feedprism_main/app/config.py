@@ -73,6 +73,10 @@ class Settings(BaseSettings):
         le=65535,
         description="Qdrant server port"
     )
+    qdrant_api_key: str | None = Field(
+        default=None,
+        description="Qdrant API key for authentication (optional)"
+    )
     qdrant_collection_name: str = Field(
         default="feedprism_emails",
         description="Default Qdrant collection name"
