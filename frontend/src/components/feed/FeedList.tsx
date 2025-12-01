@@ -97,6 +97,7 @@ export function FeedList({
 
     // Handle search results
     const handleSearchResults = useCallback((results: FeedItem[], query: string) => {
+        console.log('Search results received:', results.length, 'items for query:', query);
         setSearchQuery(query);
         setSearchResults(results);
     }, []);
@@ -207,6 +208,7 @@ export function FeedList({
     // Apply filters to items (also applies to search results)
     const filteredItems = useMemo(() => {
         // Start with search results if available, otherwise use feed items
+        console.log('filteredItems recalc - searchResults:', searchResults?.length, 'items:', items.length);
         let result = searchResults !== null ? [...searchResults] : [...items];
 
         // Type filter (if not locked by filterType prop)
