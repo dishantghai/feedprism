@@ -127,6 +127,12 @@ class Settings(BaseSettings):
         le=168,  # Max 1 week
         description="Hours back to fetch emails for processing (default: 8 hours)"
     )
+    email_max_limit: int = Field(
+        default=50,
+        ge=1,
+        le=500,
+        description="Maximum number of emails to process in a single batch (default: 50, max: 500)"
+    )
     
     # Demo Mode Configuration
     demo_mode: bool = Field(

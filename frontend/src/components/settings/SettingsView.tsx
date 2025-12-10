@@ -7,7 +7,7 @@
  * - Display preferences
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Settings,
     Sparkles,
@@ -15,13 +15,31 @@ import {
     Database,
     RefreshCw,
     Check,
-    Info
+    Info,
+    AlertCircle
 } from 'lucide-react';
 import { useDemo } from '../../contexts';
 
 export function SettingsView() {
     const { isDemo, isToggling, toggleDemo, config } = useDemo();
     const [showReloadHint, setShowReloadHint] = useState(false);
+    const [emailLimit, setEmailLimit] = useState<number>(50);
+
+    useEffect(() => {
+        // Fetch pipeline settings on mount
+        const fetchSettings = async () => {
+            try {
+                const response = await fetch('/api/pipeline/settings');
+                if (response.ok) {
+                    const data = await response.json();
+                    setEmailLimit(data.email_max_limit || 50);
+                }
+            } catch (error) {
+                console.error('Failed to fetch pipeline settings:', error);
+            }
+        };
+        fetchSettings();
+    }, []);
 
     const handleToggleDemo = async () => {
         setShowReloadHint(true);
@@ -145,6 +163,47 @@ export function SettingsView() {
                         <p>
                             Demo mode is ideal for hackathon demos and testing.
                             It uses sample newsletters already processed in the database.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Email Processing Settings Section */}
+            <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border-light)] overflow-hidden">
+                <div className="px-5 py-4 border-b border-[var(--color-border-light)]">
+                    <h3 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-blue-500" />
+                        Email Processing Limit
+                    </h3>
+                </div>
+
+                <div className="p-5 space-y-4">
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-text-primary)]">
+                            Maximum Emails per Batch
+                        </label>
+                        <p className="text-xs text-[var(--color-text-tertiary)] mb-3">
+                            Set the maximum number of emails to process in a single extraction batch (1-500)
+                        </p>
+                        <div className="flex gap-3 items-center">
+                            <input
+                                type="number"
+                                min="1"
+                                max="500"
+                                value={emailLimit}
+                                onChange={(e) => setEmailLimit(Math.min(500, Math.max(1, parseInt(e.target.value) || 1)))}
+                                className="flex-1 px-3 py-2 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border-light)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <span className="text-sm font-medium text-[var(--color-text-secondary)] min-w-fit">
+                                max: 500
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-start gap-2 text-xs text-[var(--color-text-tertiary)] p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-blue-600" />
+                        <p>
+                            Higher limits allow processing more emails at once but may take longer. The system internally caps at 500 emails maximum.
                         </p>
                     </div>
                 </div>

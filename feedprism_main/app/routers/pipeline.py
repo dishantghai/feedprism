@@ -187,8 +187,9 @@ def get_unprocessed_emails(
         # Fetch recent emails from Gmail
         # Convert hours to days (minimum 1 day for Gmail API)
         days_back = max(1, hours // 24 + 1)
-        # Limit to 25 emails for faster response and fewer SSL issues
-        raw_emails = gmail.fetch_content_rich_emails(days_back=days_back, max_results=25)
+        # Use configurable limit from settings (default 500, max 500)
+        max_emails = min(settings.email_max_limit, 500)
+        raw_emails = gmail.fetch_content_rich_emails(days_back=days_back, max_results=max_emails)
         
         # If we got some emails, continue even if there were some failures
         if not raw_emails:
@@ -617,6 +618,7 @@ async def get_pipeline_settings():
     """Get current pipeline settings."""
     return {
         "email_fetch_hours_back": settings.email_fetch_hours_back,
+        "email_max_limit": settings.email_max_limit,
         "llm_model": settings.llm_model,
         "embedding_model": settings.embedding_model_name
     }
