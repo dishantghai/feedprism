@@ -24,6 +24,11 @@ export function SettingsView() {
     const { isDemo, isToggling, toggleDemo, config } = useDemo();
     const [showReloadHint, setShowReloadHint] = useState(false);
     const [emailLimit, setEmailLimit] = useState<number>(50);
+    const [savedEmailLimit, setSavedEmailLimit] = useState<number>(50);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+    const hasUnsavedChanges = emailLimit !== savedEmailLimit;
 
     useEffect(() => {
         // Fetch pipeline settings on mount
@@ -32,7 +37,9 @@ export function SettingsView() {
                 const response = await fetch('/api/pipeline/settings');
                 if (response.ok) {
                     const data = await response.json();
-                    setEmailLimit(data.email_max_limit || 50);
+                    const limit = data.email_max_limit || 50;
+                    setEmailLimit(limit);
+                    setSavedEmailLimit(limit);
                 }
             } catch (error) {
                 console.error('Failed to fetch pipeline settings:', error);
@@ -40,6 +47,28 @@ export function SettingsView() {
         };
         fetchSettings();
     }, []);
+
+    const handleSaveEmailLimit = async () => {
+        setIsSaving(true);
+        setSaveStatus('idle');
+        try {
+            const response = await fetch(`/api/pipeline/settings?email_max_limit=${emailLimit}`, {
+                method: 'POST',
+            });
+            if (response.ok) {
+                setSavedEmailLimit(emailLimit);
+                setSaveStatus('success');
+                setTimeout(() => setSaveStatus('idle'), 3000);
+            } else {
+                setSaveStatus('error');
+            }
+        } catch (error) {
+            console.error('Failed to save email limit:', error);
+            setSaveStatus('error');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const handleToggleDemo = async () => {
         setShowReloadHint(true);
@@ -194,11 +223,48 @@ export function SettingsView() {
                                 onChange={(e) => setEmailLimit(Math.min(500, Math.max(1, parseInt(e.target.value) || 1)))}
                                 className="flex-1 px-3 py-2 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border-light)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
-                            <span className="text-sm font-medium text-[var(--color-text-secondary)] min-w-fit">
-                                max: 500
-                            </span>
+                            <button
+                                onClick={handleSaveEmailLimit}
+                                disabled={!hasUnsavedChanges || isSaving}
+                                className={`
+                                    px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
+                                    ${hasUnsavedChanges
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    }
+                                    ${isSaving ? 'opacity-50 cursor-wait' : ''}
+                                `}
+                            >
+                                {isSaving ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                ) : saveStatus === 'success' ? (
+                                    <span className="flex items-center gap-1">
+                                        <Check className="w-4 h-4" /> Saved
+                                    </span>
+                                ) : (
+                                    'Save'
+                                )}
+                            </button>
                         </div>
                     </div>
+
+                    {/* Save status feedback */}
+                    {saveStatus === 'success' && (
+                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <Check className="w-4 h-4 text-green-600" />
+                            <p className="text-sm text-green-700">
+                                Email limit saved! Changes will apply on next email fetch.
+                            </p>
+                        </div>
+                    )}
+                    {saveStatus === 'error' && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <AlertCircle className="w-4 h-4 text-red-600" />
+                            <p className="text-sm text-red-700">
+                                Failed to save settings. Please try again.
+                            </p>
+                        </div>
+                    )}
 
                     <div className="flex items-start gap-2 text-xs text-[var(--color-text-tertiary)] p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-blue-600" />

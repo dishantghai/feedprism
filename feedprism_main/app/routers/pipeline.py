@@ -57,6 +57,19 @@ _extraction_progress: Dict[str, Any] = {
 }
 _EXTRACTION_TIMEOUT_SECONDS = 600  # Auto-reset after 10 minutes
 
+# Runtime settings store (persists across requests, resets on server restart)
+# These can be modified via API and override the config defaults
+_runtime_settings: Dict[str, Any] = {
+    "email_max_limit": None,  # None means use config default
+}
+
+
+def get_email_max_limit() -> int:
+    """Get the current email max limit, preferring runtime setting over config default."""
+    if _runtime_settings["email_max_limit"] is not None:
+        return min(_runtime_settings["email_max_limit"], 500)  # Enforce hard cap
+    return min(settings.email_max_limit, 500)
+
 
 def get_gmail() -> GmailClient:
     global _gmail_client
@@ -187,8 +200,9 @@ def get_unprocessed_emails(
         # Fetch recent emails from Gmail
         # Convert hours to days (minimum 1 day for Gmail API)
         days_back = max(1, hours // 24 + 1)
-        # Use configurable limit from settings (default 500, max 500)
-        max_emails = min(settings.email_max_limit, 500)
+        # Use runtime setting (or config default), with hard cap of 500
+        max_emails = get_email_max_limit()
+        logger.info(f"Using email_max_limit={max_emails} for fetching")
         raw_emails = gmail.fetch_content_rich_emails(days_back=days_back, max_results=max_emails)
         
         # If we got some emails, continue even if there were some failures
@@ -615,12 +629,41 @@ async def extract_emails(email_ids: List[str]):
 
 @router.get("/settings")
 async def get_pipeline_settings():
-    """Get current pipeline settings."""
+    """Get current pipeline settings including runtime overrides."""
     return {
         "email_fetch_hours_back": settings.email_fetch_hours_back,
-        "email_max_limit": settings.email_max_limit,
+        "email_max_limit": get_email_max_limit(),  # Use runtime value
         "llm_model": settings.llm_model,
         "embedding_model": settings.embedding_model_name
+    }
+
+
+@router.post("/settings")
+async def update_pipeline_settings(
+    email_max_limit: int = Query(None, ge=1, le=500, description="Maximum emails to process per batch (1-500)")
+):
+    """
+    Update pipeline settings at runtime.
+    
+    These settings persist until server restart. To make permanent changes,
+    update the .env file or environment variables.
+    
+    Args:
+        email_max_limit: Maximum number of emails to fetch/process per batch (1-500)
+    
+    Returns:
+        Updated settings values
+    """
+    global _runtime_settings
+    
+    if email_max_limit is not None:
+        _runtime_settings["email_max_limit"] = min(email_max_limit, 500)  # Enforce hard cap
+        logger.info(f"Updated runtime email_max_limit to {_runtime_settings['email_max_limit']}")
+    
+    return {
+        "status": "ok",
+        "email_max_limit": get_email_max_limit(),
+        "message": f"Settings updated. email_max_limit is now {get_email_max_limit()}"
     }
 
 
