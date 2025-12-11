@@ -176,7 +176,9 @@ def get_unprocessed_emails(
     """
     Get emails from Gmail that have NOT been processed yet.
     
-    Compares Gmail emails against Qdrant to find unprocessed ones.
+    Paginates through Gmail results until we accumulate `email_max_limit` unprocessed emails.
+    This ensures that each batch contains new emails, and repeated calls will eventually
+    exhaust all unprocessed emails in the time window.
     """
     global _fetch_in_progress, _fetch_started_at
     
@@ -203,62 +205,110 @@ def get_unprocessed_emails(
         gmail = get_gmail()
         qdrant = get_qdrant()
         
-        # Get processed email IDs from Qdrant
+        # Get all processed/attempted email IDs from Qdrant upfront
         processed_ids = qdrant.get_processed_email_ids()
+        logger.info(f"Found {len(processed_ids)} already processed emails")
         
-        # Fetch recent emails from Gmail
-        # Convert hours to days (minimum 1 day for Gmail API)
+        # Convert hours to days for Gmail query (minimum 1 day for Gmail API)
         days_back = max(1, hours // 24 + 1)
-        # Use runtime setting (or config default), with hard cap of 500
+        
+        # Build Gmail query for content-rich emails
+        query_parts = [
+            f"newer_than:{days_back}d",
+            "category:promotions OR category:updates OR (subject:(newsletter OR webinar OR event OR course))"
+        ]
+        query = " ".join(query_parts)
+        
+        # Get the batch limit
         max_emails = get_email_max_limit()
-        logger.info(f"Using email_max_limit={max_emails} for fetching")
-        raw_emails = gmail.fetch_content_rich_emails(days_back=days_back, max_results=max_emails)
+        logger.info(f"Target batch size: {max_emails} unprocessed emails")
         
-        # If we got some emails, continue even if there were some failures
-        if not raw_emails:
-            logger.warning("No emails fetched from Gmail")
-            return {
-                "unprocessed_count": 0,
-                "total_fetched": 0,
-                "processed_count": len(processed_ids),
-                "hours_back": hours,
-                "emails": []
-            }
-        
-        # Filter to only unprocessed emails within the time window
+        # Paginate through Gmail results until we have enough unprocessed emails
         from datetime import datetime, timedelta
         cutoff_time = datetime.now() - timedelta(hours=hours)
         
         unprocessed = []
-        for email in raw_emails:
-            if email["id"] in processed_ids:
+        total_fetched = 0
+        page_token = None
+        pages_fetched = 0
+        max_pages = 20  # Safety limit to prevent infinite loops
+        
+        while len(unprocessed) < max_emails and pages_fetched < max_pages:
+            # Fetch a page of message IDs
+            message_list, page_token = gmail.list_messages_paginated(
+                query=query,
+                page_size=100,  # Fetch 100 IDs per page
+                page_token=page_token
+            )
+            
+            if not message_list:
+                logger.info("No more messages from Gmail")
+                break
+            
+            pages_fetched += 1
+            total_fetched += len(message_list)
+            
+            # Filter out already processed emails
+            unprocessed_ids = [
+                msg["id"] for msg in message_list 
+                if msg["id"] not in processed_ids
+            ]
+            
+            if not unprocessed_ids:
+                logger.debug(f"Page {pages_fetched}: all {len(message_list)} emails already processed")
+                if page_token is None:
+                    break
                 continue
             
-            # Check if email is within time window
-            try:
-                email_date = datetime.fromisoformat(email.get("date", "").replace("Z", "+00:00"))
-                if email_date.replace(tzinfo=None) < cutoff_time:
-                    continue
-            except:
-                pass  # Include if date parsing fails
+            logger.info(f"Page {pages_fetched}: {len(unprocessed_ids)}/{len(message_list)} unprocessed")
             
-            sender_name, sender_email = _parse_sender(email.get("from", ""))
-            unprocessed.append({
-                "id": email["id"],
-                "subject": email.get("subject", "No Subject"),
-                "sender": sender_name,
-                "sender_email": sender_email,
-                "received_at": email.get("date", ""),
-                "snippet": email.get("snippet", "")[:150] if email.get("snippet") else None,
-                "body_text": email.get("body_text"),
-                "body_html": email.get("body_html")
-            })
+            # Fetch full message content for unprocessed emails
+            messages = gmail.get_messages_batch(unprocessed_ids)
+            
+            for message in messages:
+                try:
+                    parsed = gmail._parse_message_to_dict(message)
+                    
+                    # Check if email is within time window
+                    try:
+                        email_date = datetime.fromisoformat(parsed.get("date", "").replace("Z", "+00:00"))
+                        if email_date.replace(tzinfo=None) < cutoff_time:
+                            continue
+                    except:
+                        pass  # Include if date parsing fails
+                    
+                    sender_name, sender_email = _parse_sender(parsed.get("from", ""))
+                    unprocessed.append({
+                        "id": parsed["id"],
+                        "subject": parsed.get("subject", "No Subject"),
+                        "sender": sender_name,
+                        "sender_email": sender_email,
+                        "received_at": parsed.get("date", ""),
+                        "snippet": parsed.get("snippet", "")[:150] if parsed.get("snippet") else None,
+                        "body_text": parsed.get("body_text"),
+                        "body_html": parsed.get("body_html")
+                    })
+                    
+                    # Stop if we have enough
+                    if len(unprocessed) >= max_emails:
+                        break
+                        
+                except Exception as e:
+                    logger.error(f"Failed to parse message {message.get('id')}: {e}")
+                    continue
+            
+            # Stop if no more pages
+            if page_token is None:
+                break
         
-        logger.info(f"Found {len(unprocessed)} unprocessed emails out of {len(raw_emails)} total")
+        # Trim to exact batch size
+        unprocessed = unprocessed[:max_emails]
+        
+        logger.info(f"Found {len(unprocessed)} unprocessed emails (fetched {total_fetched} total across {pages_fetched} pages)")
         
         return {
             "unprocessed_count": len(unprocessed),
-            "total_fetched": len(raw_emails),
+            "total_fetched": total_fetched,
             "processed_count": len(processed_ids),
             "hours_back": hours,
             "emails": unprocessed
@@ -300,6 +350,10 @@ async def _extraction_stream(email_ids: List[str]) -> AsyncGenerator[str, None]:
         "emails_processed": 0,
         "errors": []
     }
+    
+    # Track emails that were attempted (processed, skipped, or errored)
+    # These will be marked as "attempted" to prevent re-fetching
+    attempted_email_ids = []
     
     # Set global extraction state
     _extraction_in_progress = True
@@ -384,6 +438,7 @@ async def _extraction_stream(email_ids: List[str]) -> AsyncGenerator[str, None]:
                     images = parsed.get("images", [])
                 
                 if not text_content:
+                    attempted_email_ids.append(email_id)  # Mark as attempted even if skipped
                     yield sse_event("skip", {
                         "current": idx,
                         "total": total,
@@ -410,6 +465,7 @@ async def _extraction_stream(email_ids: List[str]) -> AsyncGenerator[str, None]:
                 extracted_count = len(events) + len(courses) + len(blogs)
                 
                 if extracted_count == 0:
+                    attempted_email_ids.append(email_id)  # Mark as attempted even if no content extracted
                     yield sse_event("skip", {
                         "current": idx,
                         "total": total,
@@ -555,6 +611,7 @@ async def _extraction_stream(email_ids: List[str]) -> AsyncGenerator[str, None]:
                     results["blogs"] += len(blogs)
                 
                 results["emails_processed"] += 1
+                attempted_email_ids.append(email_id)  # Mark as attempted after successful processing
                 
                 # Record latency
                 duration_ms = (time.time() - email_start_time) * 1000
@@ -584,6 +641,7 @@ async def _extraction_stream(email_ids: List[str]) -> AsyncGenerator[str, None]:
                 
             except Exception as e:
                 logger.error(f"Error processing email {email_id}: {e}")
+                attempted_email_ids.append(email_id)  # Mark as attempted even on error
                 results["errors"].append({
                     "email_id": email_id,
                     "error": str(e)
@@ -610,6 +668,16 @@ async def _extraction_stream(email_ids: List[str]) -> AsyncGenerator[str, None]:
     finally:
         # Always reset extraction state when done
         _extraction_in_progress = False
+        
+        # Mark all attempted emails in Qdrant (including skipped/errored)
+        # This prevents them from being re-fetched in subsequent batches
+        if attempted_email_ids:
+            try:
+                qdrant.mark_emails_as_attempted(attempted_email_ids)
+                logger.info(f"Marked {len(attempted_email_ids)} emails as attempted")
+            except Exception as e:
+                logger.error(f"Failed to mark emails as attempted: {e}")
+        
         logger.info(f"Extraction complete: {results['emails_processed']} emails, {results['events']} events, {results['courses']} courses, {results['blogs']} blogs")
 
 

@@ -11,7 +11,7 @@ import base64
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -99,6 +99,46 @@ class GmailClient:
             
             logger.success(f"Found {len(messages)} messages")
             return messages[:max_results]
+            
+        except HttpError as error:
+            logger.error(f"Gmail API error: {error}")
+            raise
+
+    def list_messages_paginated(
+        self,
+        query: str = "",
+        page_size: int = 100,
+        page_token: Optional[str] = None
+    ) -> Tuple[List[Dict[str, str]], Optional[str]]:
+        """
+        List Gmail messages with pagination support.
+        
+        Args:
+            query: Gmail search query
+            page_size: Number of messages per page (max 500)
+            page_token: Token for fetching next page (None for first page)
+        
+        Returns:
+            Tuple of (list of message metadata dicts, next_page_token or None)
+        """
+        try:
+            logger.debug(f"Listing messages page (query: '{query}', page_size: {page_size})")
+            
+            request_params = {
+                "userId": self.user_id,
+                "q": query,
+                "maxResults": min(page_size, 500)
+            }
+            if page_token:
+                request_params["pageToken"] = page_token
+            
+            response = self.service.users().messages().list(**request_params).execute()
+            
+            messages = response.get('messages', [])
+            next_page_token = response.get('nextPageToken')
+            
+            logger.debug(f"Got {len(messages)} messages, next_page: {next_page_token is not None}")
+            return messages, next_page_token
             
         except HttpError as error:
             logger.error(f"Gmail API error: {error}")

@@ -63,6 +63,9 @@ class QdrantService:
             "blogs": "feedprism_blogs"
         }
         
+        # Collection for tracking attempted emails (including those with 0 extractions)
+        self.attempted_emails_collection = "feedprism_attempted_emails"
+        
         logger.info(f"Connecting to Qdrant: {self.host}:{self.port}")
         # Pass API key if configured (for authentication)
         self.client = QdrantClientSDK(
@@ -459,15 +462,20 @@ class QdrantService:
     
     def get_processed_email_ids(self) -> set:
         """
-        Get all unique source_email_id values from all collections.
+        Get all email IDs that have been processed (attempted).
+        
+        This includes:
+        1. Emails with extracted content (from events/courses/blogs collections)
+        2. Emails that were attempted but yielded no content (from attempted_emails collection)
         
         Used to filter out already-processed emails from Gmail fetch.
         
         Returns:
-            Set of email IDs that have been processed
+            Set of email IDs that have been processed/attempted
         """
         processed_ids = set()
         
+        # Get emails with extracted content
         for content_type in ["events", "courses", "blogs"]:
             try:
                 collection = self.get_collection_name(content_type)
@@ -495,7 +503,11 @@ class QdrantService:
                 logger.warning(f"Error fetching processed IDs from {content_type}: {e}")
                 continue
         
-        logger.info(f"Found {len(processed_ids)} processed email IDs")
+        # Also include attempted emails (those processed but with 0 extractions)
+        attempted_ids = self.get_attempted_email_ids()
+        processed_ids.update(attempted_ids)
+        
+        logger.info(f"Found {len(processed_ids)} processed email IDs (including {len(attempted_ids)} attempted)")
         return processed_ids
     
     def delete_by_email_ids(self, email_ids: List[str]) -> Dict[str, int]:
@@ -586,3 +598,93 @@ class QdrantService:
                 continue
         
         return False
+
+    def ensure_attempted_emails_collection(self) -> None:
+        """
+        Ensure the attempted_emails collection exists.
+        
+        This collection tracks all emails that have been processed (attempted),
+        regardless of whether any content was extracted from them.
+        """
+        if not self.client.collection_exists(self.attempted_emails_collection):
+            logger.info(f"Creating collection: {self.attempted_emails_collection}")
+            # Simple collection with just a dummy vector (we only care about payload)
+            self.client.create_collection(
+                collection_name=self.attempted_emails_collection,
+                vectors_config=VectorParams(size=4, distance=Distance.COSINE)  # Minimal vector
+            )
+            logger.success(f"Created {self.attempted_emails_collection}")
+        else:
+            logger.debug(f"Collection already exists: {self.attempted_emails_collection}")
+
+    def mark_emails_as_attempted(self, email_ids: List[str]) -> int:
+        """
+        Mark emails as attempted (processed), regardless of extraction result.
+        
+        Args:
+            email_ids: List of Gmail email IDs to mark as attempted
+            
+        Returns:
+            Number of emails marked
+        """
+        if not email_ids:
+            return 0
+        
+        self.ensure_attempted_emails_collection()
+        
+        points = []
+        for email_id in email_ids:
+            # Use email_id hash as point ID for idempotency
+            point_id = abs(hash(email_id)) % (2**63)
+            points.append(PointStruct(
+                id=point_id,
+                vector=[0.0, 0.0, 0.0, 0.0],  # Dummy vector
+                payload={
+                    "email_id": email_id,
+                    "attempted_at": datetime.now().isoformat()
+                }
+            ))
+        
+        self.client.upsert(
+            collection_name=self.attempted_emails_collection,
+            points=points
+        )
+        
+        logger.info(f"Marked {len(email_ids)} emails as attempted")
+        return len(email_ids)
+
+    def get_attempted_email_ids(self) -> set:
+        """
+        Get all email IDs that have been attempted (processed).
+        
+        Returns:
+            Set of email IDs that have been attempted
+        """
+        attempted_ids = set()
+        
+        if not self.client.collection_exists(self.attempted_emails_collection):
+            return attempted_ids
+        
+        try:
+            offset = None
+            while True:
+                batch, offset = self.client.scroll(
+                    collection_name=self.attempted_emails_collection,
+                    limit=100,
+                    offset=offset,
+                    with_payload=["email_id"]
+                )
+                
+                for point in batch:
+                    email_id = point.payload.get("email_id")
+                    if email_id:
+                        attempted_ids.add(email_id)
+                
+                if offset is None:
+                    break
+                    
+        except Exception as e:
+            logger.warning(f"Error fetching attempted email IDs: {e}")
+        
+        logger.debug(f"Found {len(attempted_ids)} attempted email IDs")
+        return attempted_ids
