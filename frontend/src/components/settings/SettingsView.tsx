@@ -23,12 +23,21 @@ import { useDemo } from '../../contexts';
 export function SettingsView() {
     const { isDemo, isToggling, toggleDemo, config } = useDemo();
     const [showReloadHint, setShowReloadHint] = useState(false);
+
+    // Email limit state
     const [emailLimit, setEmailLimit] = useState<number>(50);
     const [savedEmailLimit, setSavedEmailLimit] = useState<number>(50);
-    const [isSaving, setIsSaving] = useState(false);
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+    const [isSavingLimit, setIsSavingLimit] = useState(false);
+    const [saveLimitStatus, setSaveLimitStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-    const hasUnsavedChanges = emailLimit !== savedEmailLimit;
+    // Fetch hours state
+    const [fetchHours, setFetchHours] = useState<number>(24);
+    const [savedFetchHours, setSavedFetchHours] = useState<number>(24);
+    const [isSavingHours, setIsSavingHours] = useState(false);
+    const [saveHoursStatus, setSaveHoursStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+    const hasUnsavedLimitChanges = emailLimit !== savedEmailLimit;
+    const hasUnsavedHoursChanges = fetchHours !== savedFetchHours;
 
     useEffect(() => {
         // Fetch pipeline settings on mount
@@ -37,9 +46,14 @@ export function SettingsView() {
                 const response = await fetch('/api/pipeline/settings');
                 if (response.ok) {
                     const data = await response.json();
+                    // Email limit
                     const limit = data.email_max_limit || 50;
                     setEmailLimit(limit);
                     setSavedEmailLimit(limit);
+                    // Fetch hours
+                    const hours = data.email_fetch_hours_back || 24;
+                    setFetchHours(hours);
+                    setSavedFetchHours(hours);
                 }
             } catch (error) {
                 console.error('Failed to fetch pipeline settings:', error);
@@ -49,24 +63,46 @@ export function SettingsView() {
     }, []);
 
     const handleSaveEmailLimit = async () => {
-        setIsSaving(true);
-        setSaveStatus('idle');
+        setIsSavingLimit(true);
+        setSaveLimitStatus('idle');
         try {
             const response = await fetch(`/api/pipeline/settings?email_max_limit=${emailLimit}`, {
                 method: 'POST',
             });
             if (response.ok) {
                 setSavedEmailLimit(emailLimit);
-                setSaveStatus('success');
-                setTimeout(() => setSaveStatus('idle'), 3000);
+                setSaveLimitStatus('success');
+                setTimeout(() => setSaveLimitStatus('idle'), 3000);
             } else {
-                setSaveStatus('error');
+                setSaveLimitStatus('error');
             }
         } catch (error) {
             console.error('Failed to save email limit:', error);
-            setSaveStatus('error');
+            setSaveLimitStatus('error');
         } finally {
-            setIsSaving(false);
+            setIsSavingLimit(false);
+        }
+    };
+
+    const handleSaveFetchHours = async () => {
+        setIsSavingHours(true);
+        setSaveHoursStatus('idle');
+        try {
+            const response = await fetch(`/api/pipeline/settings?email_fetch_hours_back=${fetchHours}`, {
+                method: 'POST',
+            });
+            if (response.ok) {
+                setSavedFetchHours(fetchHours);
+                setSaveHoursStatus('success');
+                setTimeout(() => setSaveHoursStatus('idle'), 3000);
+            } else {
+                setSaveHoursStatus('error');
+            }
+        } catch (error) {
+            console.error('Failed to save fetch hours:', error);
+            setSaveHoursStatus('error');
+        } finally {
+            setIsSavingHours(false);
         }
     };
 
@@ -225,19 +261,19 @@ export function SettingsView() {
                             />
                             <button
                                 onClick={handleSaveEmailLimit}
-                                disabled={!hasUnsavedChanges || isSaving}
+                                disabled={!hasUnsavedLimitChanges || isSavingLimit}
                                 className={`
                                     px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
-                                    ${hasUnsavedChanges
+                                    ${hasUnsavedLimitChanges
                                         ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                     }
-                                    ${isSaving ? 'opacity-50 cursor-wait' : ''}
+                                    ${isSavingLimit ? 'opacity-50 cursor-wait' : ''}
                                 `}
                             >
-                                {isSaving ? (
+                                {isSavingLimit ? (
                                     <RefreshCw className="w-4 h-4 animate-spin" />
-                                ) : saveStatus === 'success' ? (
+                                ) : saveLimitStatus === 'success' ? (
                                     <span className="flex items-center gap-1">
                                         <Check className="w-4 h-4" /> Saved
                                     </span>
@@ -249,7 +285,7 @@ export function SettingsView() {
                     </div>
 
                     {/* Save status feedback */}
-                    {saveStatus === 'success' && (
+                    {saveLimitStatus === 'success' && (
                         <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                             <Check className="w-4 h-4 text-green-600" />
                             <p className="text-sm text-green-700">
@@ -257,7 +293,7 @@ export function SettingsView() {
                             </p>
                         </div>
                     )}
-                    {saveStatus === 'error' && (
+                    {saveLimitStatus === 'error' && (
                         <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                             <AlertCircle className="w-4 h-4 text-red-600" />
                             <p className="text-sm text-red-700">
@@ -270,6 +306,84 @@ export function SettingsView() {
                         <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-blue-600" />
                         <p>
                             Higher limits allow processing more emails at once but may take longer. The system internally caps at 500 emails maximum.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Email Fetch Hours Section */}
+            <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border-light)] overflow-hidden">
+                <div className="px-5 py-4 border-b border-[var(--color-border-light)]">
+                    <h3 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                        <RefreshCw className="w-4 h-4 text-green-500" />
+                        Email Fetch Time Range
+                    </h3>
+                </div>
+
+                <div className="p-5 space-y-4">
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-text-primary)]">
+                            Hours Back to Fetch
+                        </label>
+                        <p className="text-xs text-[var(--color-text-tertiary)] mb-3">
+                            Set how far back (in hours) to look for emails to process (1-240 hours, i.e., up to 10 days)
+                        </p>
+                        <div className="flex gap-3 items-center">
+                            <input
+                                type="number"
+                                min="1"
+                                max="240"
+                                value={fetchHours}
+                                onChange={(e) => setFetchHours(Math.min(240, Math.max(1, parseInt(e.target.value) || 1)))}
+                                className="flex-1 px-3 py-2 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border-light)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                            <button
+                                onClick={handleSaveFetchHours}
+                                disabled={!hasUnsavedHoursChanges || isSavingHours}
+                                className={`
+                                    px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
+                                    ${hasUnsavedHoursChanges
+                                        ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    }
+                                    ${isSavingHours ? 'opacity-50 cursor-wait' : ''}
+                                `}
+                            >
+                                {isSavingHours ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                ) : saveHoursStatus === 'success' ? (
+                                    <span className="flex items-center gap-1">
+                                        <Check className="w-4 h-4" /> Saved
+                                    </span>
+                                ) : (
+                                    'Save'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Save status feedback */}
+                    {saveHoursStatus === 'success' && (
+                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <Check className="w-4 h-4 text-green-600" />
+                            <p className="text-sm text-green-700">
+                                Fetch hours saved! Changes will apply on next email fetch.
+                            </p>
+                        </div>
+                    )}
+                    {saveHoursStatus === 'error' && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <AlertCircle className="w-4 h-4 text-red-600" />
+                            <p className="text-sm text-red-700">
+                                Failed to save settings. Please try again.
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="flex items-start gap-2 text-xs text-[var(--color-text-tertiary)] p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-green-600" />
+                        <p>
+                            Larger time ranges fetch more historical emails but may take longer. The system internally caps at 240 hours (10 days) maximum.
                         </p>
                     </div>
                 </div>

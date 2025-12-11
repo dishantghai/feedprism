@@ -61,6 +61,7 @@ _EXTRACTION_TIMEOUT_SECONDS = 600  # Auto-reset after 10 minutes
 # These can be modified via API and override the config defaults
 _runtime_settings: Dict[str, Any] = {
     "email_max_limit": None,  # None means use config default
+    "email_fetch_hours_back": None,  # None means use config default
 }
 
 
@@ -69,6 +70,13 @@ def get_email_max_limit() -> int:
     if _runtime_settings["email_max_limit"] is not None:
         return min(_runtime_settings["email_max_limit"], 500)  # Enforce hard cap
     return min(settings.email_max_limit, 500)
+
+
+def get_email_fetch_hours() -> int:
+    """Get the current email fetch hours, preferring runtime setting over config default."""
+    if _runtime_settings["email_fetch_hours_back"] is not None:
+        return min(_runtime_settings["email_fetch_hours_back"], 240)  # Enforce hard cap of 240 hours
+    return min(settings.email_fetch_hours_back, 240)
 
 
 def get_gmail() -> GmailClient:
@@ -184,8 +192,9 @@ def get_unprocessed_emails(
         logger.warning("Email fetch already in progress, returning cached or empty")
         raise HTTPException(status_code=429, detail="Email fetch already in progress. Please wait.")
     
-    hours = hours_back or settings.email_fetch_hours_back
-    logger.info(f"Fetching unprocessed emails from last {hours} hours")
+    # Use provided hours_back, or fall back to runtime setting (or config default)
+    hours = hours_back if hours_back is not None else get_email_fetch_hours()
+    logger.info(f"Fetching unprocessed emails from last {hours} hours (max 240)")
     
     try:
         _fetch_in_progress = True
@@ -631,7 +640,7 @@ async def extract_emails(email_ids: List[str]):
 async def get_pipeline_settings():
     """Get current pipeline settings including runtime overrides."""
     return {
-        "email_fetch_hours_back": settings.email_fetch_hours_back,
+        "email_fetch_hours_back": get_email_fetch_hours(),  # Use runtime value
         "email_max_limit": get_email_max_limit(),  # Use runtime value
         "llm_model": settings.llm_model,
         "embedding_model": settings.embedding_model_name
@@ -640,7 +649,8 @@ async def get_pipeline_settings():
 
 @router.post("/settings")
 async def update_pipeline_settings(
-    email_max_limit: int = Query(None, ge=1, le=500, description="Maximum emails to process per batch (1-500)")
+    email_max_limit: int = Query(None, ge=1, le=500, description="Maximum emails to process per batch (1-500)"),
+    email_fetch_hours_back: int = Query(None, ge=1, le=240, description="Hours back to fetch emails (1-240)")
 ):
     """
     Update pipeline settings at runtime.
@@ -650,20 +660,30 @@ async def update_pipeline_settings(
     
     Args:
         email_max_limit: Maximum number of emails to fetch/process per batch (1-500)
+        email_fetch_hours_back: Hours back to fetch emails for processing (1-240)
     
     Returns:
         Updated settings values
     """
     global _runtime_settings
     
+    updated = []
+    
     if email_max_limit is not None:
         _runtime_settings["email_max_limit"] = min(email_max_limit, 500)  # Enforce hard cap
         logger.info(f"Updated runtime email_max_limit to {_runtime_settings['email_max_limit']}")
+        updated.append(f"email_max_limit={_runtime_settings['email_max_limit']}")
+    
+    if email_fetch_hours_back is not None:
+        _runtime_settings["email_fetch_hours_back"] = min(email_fetch_hours_back, 240)  # Enforce hard cap
+        logger.info(f"Updated runtime email_fetch_hours_back to {_runtime_settings['email_fetch_hours_back']}")
+        updated.append(f"email_fetch_hours_back={_runtime_settings['email_fetch_hours_back']}")
     
     return {
         "status": "ok",
         "email_max_limit": get_email_max_limit(),
-        "message": f"Settings updated. email_max_limit is now {get_email_max_limit()}"
+        "email_fetch_hours_back": get_email_fetch_hours(),
+        "message": f"Settings updated: {', '.join(updated)}" if updated else "No settings changed"
     }
 
 

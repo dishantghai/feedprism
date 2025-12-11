@@ -122,10 +122,10 @@ class Settings(BaseSettings):
     
     # Email Fetch Configuration
     email_fetch_hours_back: int = Field(
-        default=8,
+        default=24,
         ge=1,
-        le=168,  # Max 1 week
-        description="Hours back to fetch emails for processing (default: 8 hours)"
+        le=240,  # Max 10 days
+        description="Hours back to fetch emails for processing (default: 24 hours, max: 240 hours)"
     )
     email_max_limit: int = Field(
         default=50,
